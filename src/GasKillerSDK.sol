@@ -8,6 +8,7 @@ import {
 import {ISlashingRegistryCoordinator} from "@eigenlayer-middleware/interfaces/ISlashingRegistryCoordinator.sol";
 import {BN254} from "@eigenlayer-middleware/libraries/BN254.sol";
 import "./StateTracker.sol";
+import {StateChangeHandlerLib, StateUpdateType} from "./StateChangeHandlerLib.sol";
 
 /**
  * @title GasKillerSDK
@@ -129,10 +130,7 @@ abstract contract GasKillerSDK is StateTracker {
      * @param storageUpdates The storage updates to apply
      */
     function _stateChangeHandler(bytes calldata storageUpdates) internal {
-        //TODO: Implement state change handler
-    }
-
-    function decodeStorageUpdates(bytes calldata storageUpdates) internal returns (bytes memory) {
-        //TODO: Implement storage updates decoding
+        (StateUpdateType[] memory types, bytes[] memory args) = abi.decode(storageUpdates, (StateUpdateType[], bytes[]));
+        StateChangeHandlerLib._runStateUpdates(types, args);
     }
 }
