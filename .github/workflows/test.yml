@@ -15,29 +15,65 @@ jobs:
 
     name: Foundry project
     runs-on: ubuntu-latest
+
+    # Skip if the last commit only touched the generated flat/ folder
+    if: |
+      !(
+        contains(join(github.event.head_commit.added   || ''), 'flat/') &&
+        contains(join(github.event.head_commit.modified || ''), 'flat/') &&
+        contains(join(github.event.head_commit.removed  || ''), 'flat/')
+      )
+
+    permissions:          # allow the default token to push back changes
+      contents: write
+
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0      # required to push commits
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Show Forge version
-        run: |
-          forge --version
+        run: forge --version
 
       - name: Run Forge fmt
-        run: |
-          forge fmt --check
+        run: forge fmt --check
         id: fmt
 
       - name: Run Forge build
-        run: |
-          forge build --sizes
+        run: forge build --sizes
         id: build
 
       - name: Run Forge tests
-        run: |
-          forge test -vvv
+        run: forge test -vvv
         id: test
+
+      # ────────────────────────────────────────────────────────────────
+      # Auto-flatten everything under src/ into the flat/ directory
+      # ────────────────────────────────────────────────────────────────
+      - name: Regenerate flat/ directory
+        run: |
+          rm -rf flat
+          mkdir -p flat
+          for f in $(git ls-files 'src/*.sol'); do
+            base=$(basename "$f" .sol)
+            forge flatten "$f" -o "flat/${base}.flat.sol"
+          done
+
+      # sanity-check that each flat file still compiles
+      - name: Compile flattened sources
+        run: |
+          for f in flat/*.sol; do
+            solc --optimize "$f" --via-ir --bin > /dev/null
+          done
+
+      # Commit & push the fresh flats back to the branch
+      - name: Commit flattened contracts
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          file_pattern: flat/*.sol
+          commit_message: "chore(flat): auto-flatten solidity sources 🤖"
+          push_options: '--follow-tags'
