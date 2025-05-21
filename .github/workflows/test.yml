@@ -62,7 +62,6 @@ jobs:
             base=$(basename "$f" .sol)
             forge flatten "$f" -o "flat/${base}.flat.sol"
           done
-            # 🔥 Install a bare solc CLI for the sanity-check
       
       - name: Install solc
         run: |
