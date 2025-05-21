@@ -62,7 +62,13 @@ jobs:
             base=$(basename "$f" .sol)
             forge flatten "$f" -o "flat/${base}.flat.sol"
           done
-
+            # 🔥 Install a bare solc CLI for the sanity-check
+      
+      - name: Install solc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y solc
+          
       # sanity-check that each flat file still compiles
       - name: Compile flattened sources
         run: |
