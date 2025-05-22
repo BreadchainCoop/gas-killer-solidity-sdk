@@ -29,8 +29,8 @@ abstract contract GasKillerSDK is StateTracker {
 
     // Constants for stake threshold checking
     uint8 public constant THRESHOLD_DENOMINATOR = 100;
-    uint8 public constant QUORUM_THRESHOLD = 66; // 66% threshold for quorum verification
-    uint32 public constant BLOCK_STALE_MEASURE = 300;
+    uint8 public QUORUM_THRESHOLD = 66; // 66% threshold for quorum verification
+    uint32 public BLOCK_STALE_MEASURE = 300;
 
     // Custom errors
     error InvalidTransitionIndex();
