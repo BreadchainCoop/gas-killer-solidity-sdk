@@ -29,8 +29,8 @@ abstract contract GasKillerSDK is StateTracker {
 
     // Constants for stake threshold checking
     uint8 public constant THRESHOLD_DENOMINATOR = 100;
-    uint8 public QUORUM_THRESHOLD = 66; // 66% threshold for quorum verification
-    uint32 public BLOCK_STALE_MEASURE = 300;
+    uint8 public constant QUORUM_THRESHOLD = 66; // 66% threshold for quorum verification
+    uint32 public constant BLOCK_STALE_MEASURE = 300;
 
     // Custom errors
     error InvalidTransitionIndex();
@@ -40,42 +40,11 @@ abstract contract GasKillerSDK is StateTracker {
     error InsufficientQuorumThreshold();
     error StaleBlockNumber();
     error FutureBlockNumber();
-    error OnlyOwner();
-
-    // Owner address for access control
-    address public owner;
 
     constructor(address _avsAddress) {
         blsSignatureChecker = BLSSignatureChecker(BLS_SIG_CHECKER);
         avsAddress = _avsAddress;
         namespace = abi.encodePacked(avsAddress, "gaskiller");
-        owner = msg.sender;
-    }
-
-    /**
-     * @notice Modifier to restrict function access to the contract owner
-     */
-    modifier onlyOwner() {
-        if (msg.sender != owner) revert OnlyOwner();
-        _;
-    }
-
-    /**
-     * @notice Sets the quorum threshold percentage
-     * @param newThreshold The new threshold value (0-100)
-     */
-    function setQuorumThreshold(uint8 newThreshold) external onlyOwner {
-        require(newThreshold > 0 && newThreshold <= 100, "Invalid threshold value");
-        QUORUM_THRESHOLD = newThreshold;
-    }
-
-    /**
-     * @notice Sets the block stale measure
-     * @param newBlockStaleMeasure The new block stale measure value
-     */
-    function setBlockStaleMeasure(uint32 newBlockStaleMeasure) external onlyOwner {
-        require(newBlockStaleMeasure > 0, "Invalid block stale measure");
-        BLOCK_STALE_MEASURE = newBlockStaleMeasure;
     }
 
     /**
