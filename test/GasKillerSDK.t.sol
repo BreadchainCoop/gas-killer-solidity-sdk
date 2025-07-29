@@ -53,7 +53,7 @@ contract GasKillerSDKTest is Test {
         args[0] = abi.encode(address(target), uint256(0), abi.encodeWithSignature("revertCall()"));
 
         vm.expectRevert(
-            abi.encodeWithSelector(StateChangeHandlerLib.RevertingContext.selector, address(target), bytes("reverted"))
+            abi.encodeWithSelector(StateChangeHandlerLib.RevertingContext.selector, 0, bytes("reverted"))
         );
         sdk.stateChangeHandlerExternal(abi.encode(types, args));
     }
