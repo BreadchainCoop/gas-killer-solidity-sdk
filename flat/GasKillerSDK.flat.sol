@@ -2551,7 +2551,7 @@ library StateChangeHandlerLib {
                     assembly {
                         returndatacopy(add(revertData, 0x20), 0, _returndatasize)
                     }
-                    revert RevertingContext(target, revertData);
+                    revert RevertingContext(i, target, revertData, callargs);
                 }
             } else if (stateUpdateType == StateUpdateType.LOG0) {
                 // NOTE: For consistency I decode an abi encoding of bytes from bytes, but technically it's redundant
@@ -2586,7 +2586,7 @@ library StateChangeHandlerLib {
     }
 
     error InvalidArguments();
-    error RevertingContext(address target, bytes revertData);
+    error RevertingContext(uint256 index, address target, bytes revertData, bytes callargs);
 }
 
 // src/StateTracker.sol
