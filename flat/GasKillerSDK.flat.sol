@@ -6130,8 +6130,9 @@ abstract contract GasKillerSDK is StateTracker {
         require(expectedHash == msgHash, InvalidSignature());
 
         // Verify the signatures using checkSignatures
-        (IBLSSignatureCheckerTypes.QuorumStakeTotals memory stakeTotals, bytes32 signatoryRecordHash) =
-        blsSignatureChecker.checkSignatures(msgHash, quorumNumbers, referenceBlockNumber, nonSignerStakesAndSignature);
+        (IBLSSignatureCheckerTypes.QuorumStakeTotals memory stakeTotals,) = blsSignatureChecker.checkSignatures(
+            msgHash, quorumNumbers, referenceBlockNumber, nonSignerStakesAndSignature
+        );
 
         // Check that signatories own at least 66% of each quorum
         for (uint256 i = 0; i < quorumNumbers.length; i++) {
