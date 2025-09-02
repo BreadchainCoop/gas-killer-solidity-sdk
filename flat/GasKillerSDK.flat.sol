@@ -6070,8 +6070,6 @@ contract BLSSignatureChecker is BLSSignatureCheckerStorage {
 abstract contract GasKillerSDK is StateTracker {
     // The BLS signature checker contract
     BLSSignatureChecker public immutable blsSignatureChecker;
-    // The address of the BLS signature checker contract
-    address public constant BLS_SIG_CHECKER = address(0xB6861c61782aec28a14cF68cECf216Ad7f5F4e2D);
 
     // Namespace for the contract
     bytes public namespace;
@@ -6093,8 +6091,8 @@ abstract contract GasKillerSDK is StateTracker {
     error StaleBlockNumber();
     error FutureBlockNumber();
 
-    constructor(address _avsAddress) {
-        blsSignatureChecker = BLSSignatureChecker(BLS_SIG_CHECKER);
+    constructor(address _avsAddress, address _blsSignatureChecker) {
+        blsSignatureChecker = BLSSignatureChecker(_blsSignatureChecker);
         avsAddress = _avsAddress;
         namespace = abi.encodePacked(avsAddress, "gaskiller");
     }
