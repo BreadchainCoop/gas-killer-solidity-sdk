@@ -39,6 +39,11 @@ abstract contract GasKillerSDK is StateTracker {
     error StaleBlockNumber();
     error FutureBlockNumber();
 
+    /**
+     * @notice Constructor
+     * @param _avsAddress The address of the AVS service manager
+     * @param _blsSignatureChecker The address of the BLS signature checker
+     */
     constructor(address _avsAddress, address _blsSignatureChecker) {
         blsSignatureChecker = BLSSignatureChecker(_blsSignatureChecker);
         avsAddress = _avsAddress;
