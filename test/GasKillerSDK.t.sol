@@ -11,7 +11,7 @@ contract GasKillerSDKTest is Test {
     GasKillerSDKExposed public sdk;
 
     function setUp() public {
-        sdk = new GasKillerSDKExposed(makeAddr("AVS"));
+        sdk = new GasKillerSDKExposed(makeAddr("AVS"), makeAddr("BLS_SIG_CHECKER"));
     }
 
     function test_stateChangeHandlerExternal_Store() public {
