@@ -57,7 +57,6 @@ abstract contract GasKillerSDK is StateTracker {
      * @param referenceBlockNumber The block number to use as reference for operator set
      * @param storageUpdates The storage updates to verify
      * @param transitionIndex The transition index
-     * @param targetAddr The target contract address
      * @param targetFunction The target function selector
      * @param nonSignerStakesAndSignature The non-signer stakes and signature data computed off-chain
      */
@@ -67,7 +66,6 @@ abstract contract GasKillerSDK is StateTracker {
         uint32 referenceBlockNumber,
         bytes calldata storageUpdates,
         uint256 transitionIndex,
-        address targetAddr,
         bytes4 targetFunction,
         IBLSSignatureCheckerTypes.NonSignerStakesAndSignature calldata nonSignerStakesAndSignature
     ) external trackState {
@@ -77,7 +75,7 @@ abstract contract GasKillerSDK is StateTracker {
 
         // Verify transition index and message hash
         require(transitionIndex + 1 == stateTransitionCount(), InvalidTransitionIndex());
-        bytes32 expectedHash = sha256(abi.encode(transitionIndex, targetAddr, targetFunction, storageUpdates));
+        bytes32 expectedHash = sha256(abi.encode(transitionIndex, address(this), targetFunction, storageUpdates));
         require(expectedHash == msgHash, InvalidSignature());
 
         // Verify the signatures using checkSignatures
