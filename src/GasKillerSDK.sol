@@ -7,6 +7,9 @@ import {
 } from "@eigenlayer-middleware/interfaces/IBLSSignatureChecker.sol";
 import {ISlashingRegistryCoordinator} from "@eigenlayer-middleware/interfaces/ISlashingRegistryCoordinator.sol";
 import {BN254} from "@eigenlayer-middleware/libraries/BN254.sol";
+import {IERC165} from "forge-std/interfaces/IERC165.sol";
+
+import "./interface/IGasKillerSDK.sol";
 import "./StateTracker.sol";
 import {StateChangeHandlerLib, StateUpdateType} from "./StateChangeHandlerLib.sol";
 
@@ -15,7 +18,7 @@ import {StateChangeHandlerLib, StateUpdateType} from "./StateChangeHandlerLib.so
  * @notice Base SDK for implementing Gas Killer functionality in contracts
  * @dev Inherit from this contract to add Gas Killer capabilities to your contract
  */
-abstract contract GasKillerSDK is StateTracker {
+abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     // The BLS signature checker contract
     BLSSignatureChecker public immutable blsSignatureChecker;
 
@@ -103,5 +106,15 @@ abstract contract GasKillerSDK is StateTracker {
     function _stateChangeHandler(bytes calldata storageUpdates) internal {
         (StateUpdateType[] memory types, bytes[] memory args) = abi.decode(storageUpdates, (StateUpdateType[], bytes[]));
         StateChangeHandlerLib._runStateUpdates(types, args);
+    }
+
+    /**
+     * @notice Query if a contract implements an interface
+     * @param interfaceId The interface identifier, as specified in ERC-165
+     * @return `true` if the contract implements `interfaceId` and `false` otherwise
+     * @dev This implementation supports ERC165 and IGasKillerSDK interface detection
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(IERC165).interfaceId || interfaceId == type(IGasKillerSDK).interfaceId;
     }
 }

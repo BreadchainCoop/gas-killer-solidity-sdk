@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+pragma solidity ^0.8.0;
+
+import {IERC165} from "forge-std/interfaces/IERC165.sol";
+import {IBLSSignatureCheckerTypes} from "@eigenlayer-middleware/interfaces/IBLSSignatureChecker.sol";
+
+/**
+ * @title IGasKillerSDK
+ * @notice Interface for GasKillerSDK contracts
+ * @dev This interface defines the core functionality that GasKillerSDK implementations must provide
+ */
+interface IGasKillerSDK is IERC165 {
+    /**
+     * @notice Function to verify if a signature is valid and contains correct storage updates
+     * @param msgHash The hash of the message to verify
+     * @param quorumNumbers The quorum numbers to check signatures for
+     * @param referenceBlockNumber The block number to use as reference for operator set
+     * @param storageUpdates The storage updates to verify
+     * @param transitionIndex The transition index
+     * @param targetFunction The target function selector
+     * @param nonSignerStakesAndSignature The non-signer stakes and signature data computed off-chain
+     */
+    function verifyAndUpdate(
+        bytes32 msgHash,
+        bytes calldata quorumNumbers,
+        uint32 referenceBlockNumber,
+        bytes calldata storageUpdates,
+        uint256 transitionIndex,
+        bytes4 targetFunction,
+        IBLSSignatureCheckerTypes.NonSignerStakesAndSignature calldata nonSignerStakesAndSignature
+    ) external;
+}
