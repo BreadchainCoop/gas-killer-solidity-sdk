@@ -3,7 +3,8 @@ pragma solidity ^0.8.0;
 
 import "@eigenlayer-middleware/BLSSignatureChecker.sol";
 import {
-    IBLSSignatureChecker, IBLSSignatureCheckerTypes
+    IBLSSignatureChecker,
+    IBLSSignatureCheckerTypes
 } from "@eigenlayer-middleware/interfaces/IBLSSignatureChecker.sol";
 import {ISlashingRegistryCoordinator} from "@eigenlayer-middleware/interfaces/ISlashingRegistryCoordinator.sol";
 import {BN254} from "@eigenlayer-middleware/libraries/BN254.sol";
