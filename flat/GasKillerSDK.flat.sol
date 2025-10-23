@@ -5850,8 +5850,20 @@ interface IGasKillerSDK is IERC165 {
         bytes calldata storageUpdates,
         uint256 transitionIndex,
         bytes4 targetFunction,
-        bytes calldata nonSignerStakesAndSignature // IBLSSignatureCheckerTypes.NonSignerStakesAndSignature
+        IBLSSignatureCheckerTypes.NonSignerStakesAndSignature calldata nonSignerStakesAndSignature
     ) external;
+
+    /**
+     * @notice Function to get the message hash for a given transition index, target function, and storage updates
+     * @param transitionIndex The transition index
+     * @param targetFunction The target function selector
+     * @param storageUpdates The storage updates
+     * @return bytes32 The message hash
+     */
+    function getMessageHash(uint256 transitionIndex, bytes4 targetFunction, bytes calldata storageUpdates)
+        external
+        view
+        returns (bytes32);
 }
 
 // lib/eigenlayer-middleware/src/BLSSignatureChecker.sol
@@ -6160,7 +6172,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         bytes calldata storageUpdates,
         uint256 transitionIndex,
         bytes4 targetFunction,
-        bytes calldata nonSignerStakesAndSignature
+        IBLSSignatureCheckerTypes.NonSignerStakesAndSignature calldata nonSignerStakesAndSignature
     ) external trackState {
         // Check block number validity
         require(referenceBlockNumber < block.number, FutureBlockNumber());
@@ -6171,12 +6183,9 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         bytes32 expectedHash = sha256(abi.encode(transitionIndex, address(this), targetFunction, storageUpdates));
         require(expectedHash == msgHash, InvalidSignature());
 
-        IBLSSignatureCheckerTypes.NonSignerStakesAndSignature memory _nonSignerStakesAndSignature =
-            abi.decode(nonSignerStakesAndSignature, (IBLSSignatureCheckerTypes.NonSignerStakesAndSignature));
-
         // Verify the signatures using checkSignatures
         (IBLSSignatureCheckerTypes.QuorumStakeTotals memory stakeTotals,) = blsSignatureChecker.checkSignatures(
-            msgHash, quorumNumbers, referenceBlockNumber, _nonSignerStakesAndSignature
+            msgHash, quorumNumbers, referenceBlockNumber, nonSignerStakesAndSignature
         );
 
         // Check that signatories own at least 66% of each quorum
@@ -6218,8 +6227,8 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
      * @param storageUpdates The storage updates
      * @return bytes32 The expected hash
      */
-    function getExpectedHash(uint256 transitionIndex, bytes4 targetFunction, bytes calldata storageUpdates)
-        public
+    function getMessageHash(uint256 transitionIndex, bytes4 targetFunction, bytes calldata storageUpdates)
+        external
         view
         returns (bytes32)
     {
