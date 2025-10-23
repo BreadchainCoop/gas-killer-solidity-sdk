@@ -38,7 +38,7 @@ interface IGasKillerSDK is IERC165 {
      * @return bytes32 The message hash
      */
     function getMessageHash(uint256 transitionIndex, bytes4 targetFunction, bytes calldata storageUpdates)
-        public
+        external
         view
         returns (bytes32);
 }

@@ -127,7 +127,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
      * @return bytes32 The expected hash
      */
     function getMessageHash(uint256 transitionIndex, bytes4 targetFunction, bytes calldata storageUpdates)
-        public
+        external
         view
         returns (bytes32)
     {
