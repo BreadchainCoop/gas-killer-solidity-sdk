@@ -71,7 +71,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         bytes calldata storageUpdates,
         uint256 transitionIndex,
         bytes4 targetFunction,
-        bytes calldata nonSignerStakesAndSignature
+        IBLSSignatureCheckerTypes.NonSignerStakesAndSignature calldata nonSignerStakesAndSignature
     ) external trackState {
         // Check block number validity
         require(referenceBlockNumber < block.number, FutureBlockNumber());
@@ -82,12 +82,9 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         bytes32 expectedHash = sha256(abi.encode(transitionIndex, address(this), targetFunction, storageUpdates));
         require(expectedHash == msgHash, InvalidSignature());
 
-        IBLSSignatureCheckerTypes.NonSignerStakesAndSignature memory _nonSignerStakesAndSignature =
-            abi.decode(nonSignerStakesAndSignature, (IBLSSignatureCheckerTypes.NonSignerStakesAndSignature));
-
         // Verify the signatures using checkSignatures
         (IBLSSignatureCheckerTypes.QuorumStakeTotals memory stakeTotals,) = blsSignatureChecker.checkSignatures(
-            msgHash, quorumNumbers, referenceBlockNumber, _nonSignerStakesAndSignature
+            msgHash, quorumNumbers, referenceBlockNumber, nonSignerStakesAndSignature
         );
 
         // Check that signatories own at least 66% of each quorum
@@ -129,7 +126,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
      * @param storageUpdates The storage updates
      * @return bytes32 The expected hash
      */
-    function getExpectedHash(uint256 transitionIndex, bytes4 targetFunction, bytes calldata storageUpdates)
+    function getMessageHash(uint256 transitionIndex, bytes4 targetFunction, bytes calldata storageUpdates)
         public
         view
         returns (bytes32)

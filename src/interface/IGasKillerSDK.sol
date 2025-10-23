@@ -27,6 +27,18 @@ interface IGasKillerSDK is IERC165 {
         bytes calldata storageUpdates,
         uint256 transitionIndex,
         bytes4 targetFunction,
-        bytes calldata nonSignerStakesAndSignature // IBLSSignatureCheckerTypes.NonSignerStakesAndSignature
+        IBLSSignatureCheckerTypes.NonSignerStakesAndSignature calldata nonSignerStakesAndSignature
     ) external;
+
+    /**
+     * @notice Function to get the message hash for a given transition index, target function, and storage updates
+     * @param transitionIndex The transition index
+     * @param targetFunction The target function selector
+     * @param storageUpdates The storage updates
+     * @return bytes32 The message hash
+     */
+    function getMessageHash(uint256 transitionIndex, bytes4 targetFunction, bytes calldata storageUpdates)
+        public
+        view
+        returns (bytes32);
 }
