@@ -4,4 +4,3 @@
 [submodule "lib/eigenlayer-middleware"]
 	path = lib/eigenlayer-middleware
 	url = https://github.com/BreadchainCoop/eigenlayer-middleware
-	branch = on-chain-check-signatures
