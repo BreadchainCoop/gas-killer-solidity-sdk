@@ -22,17 +22,19 @@ jobs:
         contains(join(github.event.pull_request.changed_files || github.event.head_commit.removed || '', ' '), 'flat/')
       )
 
-    permissions:          # allow the default token to push back changes
+    permissions: # allow the default token to push back changes
       contents: write
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          fetch-depth: 0      # required to push commits
+          fetch-depth: 0 # required to push commits
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
 
       # ────────────────────────────────────────────────────────────────
       # Auto-flatten everything under src/ into the flat/ directory
@@ -45,7 +47,7 @@ jobs:
             base=$(basename "$f" .sol)
             forge flatten "$f" -o "flat/${base}.flat.sol"
           done
-      
+
       - name: Install solc
         run: |
           sudo add-apt-repository -y ppa:ethereum/ethereum
@@ -65,4 +67,4 @@ jobs:
         with:
           file_pattern: flat/*.sol
           commit_message: "chore(flat): auto-flatten solidity sources 🤖"
-          push_options: '--follow-tags' 
+          push_options: "--follow-tags"
