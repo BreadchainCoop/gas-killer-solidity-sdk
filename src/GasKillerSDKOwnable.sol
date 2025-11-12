@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.0;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin-v5/contracts/access/Ownable.sol";
 import {GasKillerSDK} from "./GasKillerSDK.sol";
 
 /**
@@ -11,10 +11,8 @@ import {GasKillerSDK} from "./GasKillerSDK.sol";
 contract GasKillerSDKOwnable is GasKillerSDK, Ownable {
     constructor(address _avsAddress, address _blsSignatureChecker, address _owner)
         GasKillerSDK(_avsAddress, _blsSignatureChecker)
-        Ownable()
-    {
-        _transferOwnership(_owner);
-    }
+        Ownable(_owner)
+    {}
 
     /**
      * @notice Allows the contract owner to set a new AVS address

@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.0;
 
-import {Initializable} from "@openzeppelin-upgrades/contracts/proxy/utils/Initializable.sol";
-import {BN254} from "@eigenlayer-middleware/libraries/BN254.sol";
+import {Initializable} from "@openzeppelin-upgrades-v5/contracts/proxy/utils/Initializable.sol";
 import {
     IBLSSignatureChecker,
     IBLSSignatureCheckerTypes
 } from "@eigenlayer-middleware/interfaces/IBLSSignatureChecker.sol";
-import {ISlashingRegistryCoordinator} from "@eigenlayer-middleware/interfaces/ISlashingRegistryCoordinator.sol";
 import {IERC165} from "forge-std/interfaces/IERC165.sol";
 
 import {IGasKillerSDK} from "../interface/IGasKillerSDK.sol";

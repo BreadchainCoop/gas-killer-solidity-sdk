@@ -5,8 +5,6 @@ import {
     IBLSSignatureChecker,
     IBLSSignatureCheckerTypes
 } from "@eigenlayer-middleware/interfaces/IBLSSignatureChecker.sol";
-import {ISlashingRegistryCoordinator} from "@eigenlayer-middleware/interfaces/ISlashingRegistryCoordinator.sol";
-import {BN254} from "@eigenlayer-middleware/libraries/BN254.sol";
 import {IERC165} from "forge-std/interfaces/IERC165.sol";
 
 import {IGasKillerSDK} from "./interface/IGasKillerSDK.sol";
@@ -19,14 +17,11 @@ import {StateChangeHandlerLib, StateUpdateType} from "./StateChangeHandlerLib.so
  * @dev Inherit from this contract to add Gas Killer capabilities to your contract
  */
 abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
-    // The BLS signature checker contract
-    IBLSSignatureChecker public immutable blsSignatureChecker;
-
-    // Namespace for the contract
     bytes public namespace;
-
-    // The AVS service manager address
     address public avsAddress;
+
+    // The BLS signature checker contract
+    IBLSSignatureChecker public immutable BLS_SIGNATURE_CHECKER;
 
     // Constants for stake threshold checking
     uint8 public constant THRESHOLD_DENOMINATOR = 100;
@@ -40,7 +35,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
      */
     constructor(address _avsAddress, address _blsSignatureChecker) {
         _setAvsAddress(_avsAddress);
-        blsSignatureChecker = IBLSSignatureChecker(_blsSignatureChecker);
+        BLS_SIGNATURE_CHECKER = IBLSSignatureChecker(_blsSignatureChecker);
     }
 
     /**
@@ -72,7 +67,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         require(expectedHash == msgHash, InvalidSignature());
 
         // Verify the signatures using checkSignatures
-        (IBLSSignatureCheckerTypes.QuorumStakeTotals memory stakeTotals,) = blsSignatureChecker.checkSignatures(
+        (IBLSSignatureCheckerTypes.QuorumStakeTotals memory stakeTotals,) = BLS_SIGNATURE_CHECKER.checkSignatures(
             msgHash, quorumNumbers, referenceBlockNumber, nonSignerStakesAndSignature
         );
 

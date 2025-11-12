@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.0;
 
-import {OwnableUpgradeable} from "@openzeppelin-upgrades/contracts/access/OwnableUpgradeable.sol";
-import {Initializable} from "@openzeppelin-upgrades/contracts/proxy/utils/Initializable.sol";
+import {OwnableUpgradeable} from "@openzeppelin-upgrades-v5/contracts/access/OwnableUpgradeable.sol";
+import {Initializable} from "@openzeppelin-upgrades-v5/contracts/proxy/utils/Initializable.sol";
 import {GasKillerSDK} from "./GasKillerSDK.sol";
 
 /**
@@ -15,8 +15,7 @@ abstract contract GasKillerSDKOwnable is GasKillerSDK, OwnableUpgradeable {
     /// @param _blsSignatureChecker The address of the BLS signature checker
     /// @param _owner The address to set as the contract owner
     function initialize(address _avsAddress, address _blsSignatureChecker, address _owner) public virtual initializer {
-        __Ownable_init();
-        _transferOwnership(_owner);
+        __Ownable_init(_owner);
         GasKillerSDK.initialize(_avsAddress, _blsSignatureChecker);
     }
 
