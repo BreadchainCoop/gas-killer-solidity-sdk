@@ -3504,6 +3504,42 @@ abstract contract Ownable is Context {
     }
 }
 
+// lib/openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol
+
+// OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
+
+/**
+ * @dev Provides information about the current execution context, including the
+ * sender of the transaction and its data. While these are generally available
+ * via msg.sender and msg.data, they should not be accessed in such a direct
+ * manner, since when dealing with meta-transactions the account sending and
+ * paying for execution may not be the actual sender (as far as an application
+ * is concerned).
+ *
+ * This contract is only required for intermediate, library-like contracts.
+ */
+abstract contract ContextUpgradeable is Initializable {
+    function __Context_init() internal onlyInitializing {
+    }
+
+    function __Context_init_unchained() internal onlyInitializing {
+    }
+    function _msgSender() internal view virtual returns (address) {
+        return msg.sender;
+    }
+
+    function _msgData() internal view virtual returns (bytes calldata) {
+        return msg.data;
+    }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[50] private __gap;
+}
+
 // lib/eigenlayer-middleware/lib/eigenlayer-contracts/src/contracts/libraries/SlashingLib.sol
 
 /// @dev All scaling factors have `1e18` as an initial/default value. This value is represented
@@ -3683,6 +3719,98 @@ library SlashingLib {
         // round up mulDiv so we don't overslash
         return operatorShares - operatorShares.mulDiv(newMaxMagnitude, prevMaxMagnitude, Math.Rounding.Up);
     }
+}
+
+// lib/openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol
+
+// OpenZeppelin Contracts (last updated v4.9.0) (access/Ownable.sol)
+
+/**
+ * @dev Contract module which provides a basic access control mechanism, where
+ * there is an account (an owner) that can be granted exclusive access to
+ * specific functions.
+ *
+ * By default, the owner account will be the one that deploys the contract. This
+ * can later be changed with {transferOwnership}.
+ *
+ * This module is used through inheritance. It will make available the modifier
+ * `onlyOwner`, which can be applied to your functions to restrict their use to
+ * the owner.
+ */
+abstract contract OwnableUpgradeable is Initializable, ContextUpgradeable {
+    address private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Initializes the contract setting the deployer as the initial owner.
+     */
+    function __Ownable_init() internal onlyInitializing {
+        __Ownable_init_unchained();
+    }
+
+    function __Ownable_init_unchained() internal onlyInitializing {
+        _transferOwnership(_msgSender());
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        _checkOwner();
+        _;
+    }
+
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if the sender is not the owner.
+     */
+    function _checkOwner() internal view virtual {
+        require(owner() == _msgSender(), "Ownable: caller is not the owner");
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby disabling any functionality that is only available to the owner.
+     */
+    function renounceOwnership() public virtual onlyOwner {
+        _transferOwnership(address(0));
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[49] private __gap;
 }
 
 // lib/eigenlayer-middleware/lib/eigenlayer-contracts/src/contracts/interfaces/IStrategy.sol
@@ -6631,5 +6759,36 @@ abstract contract GasKillerSDK is StateTracker, Initializable, IGasKillerSDK {
         assembly {
             $.slot := GAS_KILLER_SDK_STORAGE_LOCATION
         }
+    }
+}
+
+// src/upgradeable/GasKillerSDKOwnable.sol
+
+/**
+ * @title GasKillerSDKOwnable
+ * @notice Upgradeable GasKillerSDK with Ownable access control
+ */
+abstract contract GasKillerSDKOwnable is GasKillerSDK, OwnableUpgradeable {
+    /// @notice Initializes the contract with AVS address and BLS Signature Checker, and sets the owner
+    /// @param _avsAddress The address of the AVS service manager
+    /// @param _blsSignatureChecker The address of the BLS signature checker
+    /// @param _owner The address to set as the contract owner
+    function initialize(address _avsAddress, address _blsSignatureChecker, address _owner) public virtual initializer {
+        __Ownable_init();
+        _transferOwnership(_owner);
+        GasKillerSDK.initialize(_avsAddress, _blsSignatureChecker);
+    }
+
+    /**
+     * @dev Example: Restricts setting AVS address to only owner.
+     * If you want owner-only admin functions, you can add them like this:
+     */
+    function setAvsAddress(address newAvsAddress) external onlyOwner {
+        _setAvsAddress(newAvsAddress);
+    }
+
+    /// @notice Disables initializers for the contract
+    function _disableInitializers() internal override(Initializable) {
+        super._disableInitializers();
     }
 }

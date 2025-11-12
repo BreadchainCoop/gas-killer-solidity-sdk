@@ -22,7 +22,8 @@ contract StateTracker {
      * @dev This slot is computed as keccak256("gasKiller.stateTracker") - 1
      *      It is used to store the number of state transitions that have occurred
      */
-    bytes32 internal constant _stateTrackerSlot = 0xdebfdfd5a50ad117c10898d68b5ccf0893c6b40d4f443f902e2e7646601bdeaf;
+    bytes32 internal constant STATE_TRACKER_STORAGE_LOCATION =
+        0xdebfdfd5a50ad117c10898d68b5ccf0893c6b40d4f443f902e2e7646601bdeaf;
 
     /**
      * @notice Modifier that increments the state transition counter
@@ -37,8 +38,8 @@ contract StateTracker {
      */
     modifier trackState() {
         assembly {
-            let count := sload(_stateTrackerSlot)
-            sstore(_stateTrackerSlot, add(0x01, count))
+            let count := sload(STATE_TRACKER_STORAGE_LOCATION)
+            sstore(STATE_TRACKER_STORAGE_LOCATION, add(0x01, count))
         }
         _;
     }
@@ -50,7 +51,7 @@ contract StateTracker {
      */
     function stateTransitionCount() public view returns (uint256 count) {
         assembly {
-            count := sload(_stateTrackerSlot)
+            count := sload(STATE_TRACKER_STORAGE_LOCATION)
         }
     }
 }

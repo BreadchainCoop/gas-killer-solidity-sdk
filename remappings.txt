@@ -1,1 +1,3 @@
 @eigenlayer-middleware/=lib/eigenlayer-middleware/src/
+@openzeppelin-v5/=lib/openzeppelin-contracts/
+@openzeppelin-upgrades-v5/=lib/openzeppelin-contracts-upgradeable/
