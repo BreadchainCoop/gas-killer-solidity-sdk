@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.0;
 
-import {BLSSignatureChecker} from "@eigenlayer-middleware/BLSSignatureChecker.sol";
 import {
     IBLSSignatureChecker,
     IBLSSignatureCheckerTypes
@@ -21,7 +20,7 @@ import {StateChangeHandlerLib, StateUpdateType} from "./StateChangeHandlerLib.so
  */
 abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     // The BLS signature checker contract
-    BLSSignatureChecker public immutable blsSignatureChecker;
+    IBLSSignatureChecker public immutable blsSignatureChecker;
 
     // Namespace for the contract
     bytes public namespace;
@@ -41,7 +40,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
      */
     constructor(address _avsAddress, address _blsSignatureChecker) {
         _setAvsAddress(_avsAddress);
-        blsSignatureChecker = BLSSignatureChecker(_blsSignatureChecker);
+        blsSignatureChecker = IBLSSignatureChecker(_blsSignatureChecker);
     }
 
     /**
