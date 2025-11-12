@@ -17,6 +17,7 @@ contract GasKillerSDKOwnable is GasKillerSDK, Ownable {
     /**
      * @notice Allows the contract owner to set a new AVS address
      * @param newAvsAddress The new AVS service manager address
+     * @dev Also updates the namespace for the contract
      */
     function setAvsAddress(address newAvsAddress) external onlyOwner {
         _setAvsAddress(newAvsAddress);

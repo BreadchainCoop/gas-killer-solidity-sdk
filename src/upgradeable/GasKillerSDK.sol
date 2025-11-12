@@ -34,12 +34,18 @@ abstract contract GasKillerSDK is StateTracker, Initializable, IGasKillerSDK {
     uint8 public constant QUORUM_THRESHOLD = 66; // 66% quorum threshold
     uint32 public constant BLOCK_STALE_MEASURE = 300;
 
-    /// @notice Initializes the contract
-    function initialize(address _avsAddress, address _blsSignatureChecker) public initializer {
-        GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
-        $.avsAddress = _avsAddress;
-        $.blsSignatureChecker = IBLSSignatureChecker(_blsSignatureChecker);
-        $.namespace = abi.encodePacked($.avsAddress, "gaskiller");
+    /**
+     * @notice Initializes the contract
+     * @param _avsAddress The address of the AVS service manager
+     * @param _blsSignatureChecker The address of the BLS signature checker
+     */
+    function __GasKillerSDK_init(address _avsAddress, address _blsSignatureChecker) internal onlyInitializing {
+        __GasKillerSDK_init_unchained(_avsAddress, _blsSignatureChecker);
+    }
+
+    function __GasKillerSDK_init_unchained(address _avsAddress, address _blsSignatureChecker) internal onlyInitializing {
+        _setAvsAddress(_avsAddress);
+        _setBlsSignatureChecker(_blsSignatureChecker);
     }
 
     /**
@@ -156,6 +162,11 @@ abstract contract GasKillerSDK is StateTracker, Initializable, IGasKillerSDK {
         GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
         $.avsAddress = _avsAddress;
         $.namespace = abi.encodePacked($.avsAddress, "gaskiller");
+    }
+
+    function _setBlsSignatureChecker(address _blsSignatureChecker) internal {
+        GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
+        $.blsSignatureChecker = IBLSSignatureChecker(_blsSignatureChecker);
     }
 
     /**
