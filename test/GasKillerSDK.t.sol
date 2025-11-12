@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
+import {IERC165} from "forge-std/interfaces/IERC165.sol";
+
 import "../src/GasKillerSDK.sol";
 import "./exposed/GasKillerSDKExposed.sol";
 import {StateUpdateType} from "../src/StateChangeHandlerLib.sol";
@@ -89,6 +91,20 @@ contract GasKillerSDKTest is Test {
 
         vm.expectRevert(StateChangeHandlerLib.InvalidArguments.selector);
         sdk.stateChangeHandlerExternal(abi.encode(types, args));
+    }
+
+    function test_ERC165_supportsInterface() public {
+        // Test that the contract supports IERC165
+        assertTrue(sdk.supportsInterface(type(IERC165).interfaceId));
+
+        // Test that the contract supports IGasKillerSDK
+        assertTrue(sdk.supportsInterface(type(IGasKillerSDK).interfaceId));
+
+        // Test that the contract does not support a random interface
+        assertFalse(sdk.supportsInterface(0x12345678));
+
+        // Test that the contract does not support 0xffffffff (invalid interface ID)
+        assertFalse(sdk.supportsInterface(0xffffffff));
     }
 }
 
