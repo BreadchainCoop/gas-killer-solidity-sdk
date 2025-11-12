@@ -1,5 +1,249 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity >=0.5.0 >=0.6.2 ^0.8.0 ^0.8.27;
+pragma solidity >=0.5.0 >=0.6.2 ^0.8.0 ^0.8.1 ^0.8.2 ^0.8.27;
+
+// lib/openzeppelin-contracts-upgradeable/contracts/utils/AddressUpgradeable.sol
+
+// OpenZeppelin Contracts (last updated v4.9.0) (utils/Address.sol)
+
+/**
+ * @dev Collection of functions related to the address type
+ */
+library AddressUpgradeable {
+    /**
+     * @dev Returns true if `account` is a contract.
+     *
+     * [IMPORTANT]
+     * ====
+     * It is unsafe to assume that an address for which this function returns
+     * false is an externally-owned account (EOA) and not a contract.
+     *
+     * Among others, `isContract` will return false for the following
+     * types of addresses:
+     *
+     *  - an externally-owned account
+     *  - a contract in construction
+     *  - an address where a contract will be created
+     *  - an address where a contract lived, but was destroyed
+     *
+     * Furthermore, `isContract` will also return true if the target contract within
+     * the same transaction is already scheduled for destruction by `SELFDESTRUCT`,
+     * which only has an effect at the end of a transaction.
+     * ====
+     *
+     * [IMPORTANT]
+     * ====
+     * You shouldn't rely on `isContract` to protect against flash loan attacks!
+     *
+     * Preventing calls from contracts is highly discouraged. It breaks composability, breaks support for smart wallets
+     * like Gnosis Safe, and does not provide security since it can be circumvented by calling from a contract
+     * constructor.
+     * ====
+     */
+    function isContract(address account) internal view returns (bool) {
+        // This method relies on extcodesize/address.code.length, which returns 0
+        // for contracts in construction, since the code is only stored at the end
+        // of the constructor execution.
+
+        return account.code.length > 0;
+    }
+
+    /**
+     * @dev Replacement for Solidity's `transfer`: sends `amount` wei to
+     * `recipient`, forwarding all available gas and reverting on errors.
+     *
+     * https://eips.ethereum.org/EIPS/eip-1884[EIP1884] increases the gas cost
+     * of certain opcodes, possibly making contracts go over the 2300 gas limit
+     * imposed by `transfer`, making them unable to receive funds via
+     * `transfer`. {sendValue} removes this limitation.
+     *
+     * https://consensys.net/diligence/blog/2019/09/stop-using-soliditys-transfer-now/[Learn more].
+     *
+     * IMPORTANT: because control is transferred to `recipient`, care must be
+     * taken to not create reentrancy vulnerabilities. Consider using
+     * {ReentrancyGuard} or the
+     * https://solidity.readthedocs.io/en/v0.8.0/security-considerations.html#use-the-checks-effects-interactions-pattern[checks-effects-interactions pattern].
+     */
+    function sendValue(address payable recipient, uint256 amount) internal {
+        require(address(this).balance >= amount, "Address: insufficient balance");
+
+        (bool success, ) = recipient.call{value: amount}("");
+        require(success, "Address: unable to send value, recipient may have reverted");
+    }
+
+    /**
+     * @dev Performs a Solidity function call using a low level `call`. A
+     * plain `call` is an unsafe replacement for a function call: use this
+     * function instead.
+     *
+     * If `target` reverts with a revert reason, it is bubbled up by this
+     * function (like regular Solidity function calls).
+     *
+     * Returns the raw returned data. To convert to the expected return value,
+     * use https://solidity.readthedocs.io/en/latest/units-and-global-variables.html?highlight=abi.decode#abi-encoding-and-decoding-functions[`abi.decode`].
+     *
+     * Requirements:
+     *
+     * - `target` must be a contract.
+     * - calling `target` with `data` must not revert.
+     *
+     * _Available since v3.1._
+     */
+    function functionCall(address target, bytes memory data) internal returns (bytes memory) {
+        return functionCallWithValue(target, data, 0, "Address: low-level call failed");
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`], but with
+     * `errorMessage` as a fallback revert reason when `target` reverts.
+     *
+     * _Available since v3.1._
+     */
+    function functionCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
+        return functionCallWithValue(target, data, 0, errorMessage);
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+     * but also transferring `value` wei to `target`.
+     *
+     * Requirements:
+     *
+     * - the calling contract must have an ETH balance of at least `value`.
+     * - the called Solidity function must be `payable`.
+     *
+     * _Available since v3.1._
+     */
+    function functionCallWithValue(address target, bytes memory data, uint256 value) internal returns (bytes memory) {
+        return functionCallWithValue(target, data, value, "Address: low-level call with value failed");
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCallWithValue-address-bytes-uint256-}[`functionCallWithValue`], but
+     * with `errorMessage` as a fallback revert reason when `target` reverts.
+     *
+     * _Available since v3.1._
+     */
+    function functionCallWithValue(
+        address target,
+        bytes memory data,
+        uint256 value,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
+        require(address(this).balance >= value, "Address: insufficient balance for call");
+        (bool success, bytes memory returndata) = target.call{value: value}(data);
+        return verifyCallResultFromTarget(target, success, returndata, errorMessage);
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+     * but performing a static call.
+     *
+     * _Available since v3.3._
+     */
+    function functionStaticCall(address target, bytes memory data) internal view returns (bytes memory) {
+        return functionStaticCall(target, data, "Address: low-level static call failed");
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],
+     * but performing a static call.
+     *
+     * _Available since v3.3._
+     */
+    function functionStaticCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal view returns (bytes memory) {
+        (bool success, bytes memory returndata) = target.staticcall(data);
+        return verifyCallResultFromTarget(target, success, returndata, errorMessage);
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+     * but performing a delegate call.
+     *
+     * _Available since v3.4._
+     */
+    function functionDelegateCall(address target, bytes memory data) internal returns (bytes memory) {
+        return functionDelegateCall(target, data, "Address: low-level delegate call failed");
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],
+     * but performing a delegate call.
+     *
+     * _Available since v3.4._
+     */
+    function functionDelegateCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
+        (bool success, bytes memory returndata) = target.delegatecall(data);
+        return verifyCallResultFromTarget(target, success, returndata, errorMessage);
+    }
+
+    /**
+     * @dev Tool to verify that a low level call to smart-contract was successful, and revert (either by bubbling
+     * the revert reason or using the provided one) in case of unsuccessful call or if target was not a contract.
+     *
+     * _Available since v4.8._
+     */
+    function verifyCallResultFromTarget(
+        address target,
+        bool success,
+        bytes memory returndata,
+        string memory errorMessage
+    ) internal view returns (bytes memory) {
+        if (success) {
+            if (returndata.length == 0) {
+                // only check isContract if the call was successful and the return data is empty
+                // otherwise we already know that it was a contract
+                require(isContract(target), "Address: call to non-contract");
+            }
+            return returndata;
+        } else {
+            _revert(returndata, errorMessage);
+        }
+    }
+
+    /**
+     * @dev Tool to verify that a low level call was successful, and revert if it wasn't, either by bubbling the
+     * revert reason or using the provided one.
+     *
+     * _Available since v4.3._
+     */
+    function verifyCallResult(
+        bool success,
+        bytes memory returndata,
+        string memory errorMessage
+    ) internal pure returns (bytes memory) {
+        if (success) {
+            return returndata;
+        } else {
+            _revert(returndata, errorMessage);
+        }
+    }
+
+    function _revert(bytes memory returndata, string memory errorMessage) private pure {
+        // Look for revert reason and bubble it up if present
+        if (returndata.length > 0) {
+            // The easiest way to bubble the revert reason is using memory via assembly
+            /// @solidity memory-safe-assembly
+            assembly {
+                let returndata_size := mload(returndata)
+                revert(add(32, returndata), returndata_size)
+            }
+        } else {
+            revert(errorMessage);
+        }
+    }
+}
 
 // lib/eigenlayer-middleware/src/libraries/BN254.sol
 
@@ -376,6 +620,259 @@ library BN254 {
         }
         require(success, ExpModFailed());
         return output[0];
+    }
+}
+
+// lib/eigenlayer-middleware/src/libraries/BitmapUtils.sol
+
+/**
+ * @title Library for Bitmap utilities such as converting between an array of bytes and a bitmap and finding the number of 1s in a bitmap.
+ * @author Layr Labs, Inc.
+ */
+library BitmapUtils {
+    /// @dev Thrown when the input byte array is too long to be converted to a bitmap
+    error BytesArrayLengthTooLong();
+    /// @dev Thrown when the input byte array is not strictly ordered
+    error BytesArrayNotOrdered();
+    /// @dev Thrown when the bitmap value is too large
+    error BitmapValueTooLarge();
+
+    /**
+     * @notice Byte arrays are meant to contain unique bytes.
+     * If the array length exceeds 256, then it's impossible for all entries to be unique.
+     * This constant captures the max allowed array length (inclusive, i.e. 256 is allowed).
+     */
+    uint256 internal constant MAX_BYTE_ARRAY_LENGTH = 256;
+
+    /**
+     * @notice Converts an ordered array of bytes into a bitmap.
+     * @param orderedBytesArray The array of bytes to convert/compress into a bitmap. Must be in strictly ascending order.
+     * @return The resulting bitmap.
+     * @dev Each byte in the input is processed as indicating a single bit to flip in the bitmap.
+     * @dev This function will eventually revert in the event that the `orderedBytesArray` is not properly ordered (in ascending order).
+     * @dev This function will also revert if the `orderedBytesArray` input contains any duplicate entries (i.e. duplicate bytes).
+     */
+    function orderedBytesArrayToBitmap(
+        bytes memory orderedBytesArray
+    ) internal pure returns (uint256) {
+        // sanity-check on input. a too-long input would fail later on due to having duplicate entry(s)
+        require(orderedBytesArray.length <= MAX_BYTE_ARRAY_LENGTH, BytesArrayLengthTooLong());
+
+        // return empty bitmap early if length of array is 0
+        if (orderedBytesArray.length == 0) {
+            return uint256(0);
+        }
+
+        // initialize the empty bitmap, to be built inside the loop
+        uint256 bitmap;
+        // initialize an empty uint256 to be used as a bitmask inside the loop
+        uint256 bitMask;
+
+        // perform the 0-th loop iteration with the ordering check *omitted* (since it is unnecessary / will always pass)
+        // construct a single-bit mask from the numerical value of the 0th byte of the array, and immediately add it to the bitmap
+        bitmap = uint256(1 << uint8(orderedBytesArray[0]));
+
+        // loop through each byte in the array to construct the bitmap
+        for (uint256 i = 1; i < orderedBytesArray.length; ++i) {
+            // construct a single-bit mask from the numerical value of the next byte of the array
+            bitMask = uint256(1 << uint8(orderedBytesArray[i]));
+            // check strictly ascending array ordering by comparing the mask to the bitmap so far (revert if mask isn't greater than bitmap)
+            require(bitMask > bitmap, BytesArrayNotOrdered());
+            // add the entry to the bitmap
+            bitmap = (bitmap | bitMask);
+        }
+        return bitmap;
+    }
+
+    /**
+     * @notice Converts an ordered byte array to a bitmap, validating that all bits are less than `bitUpperBound`
+     * @param orderedBytesArray The array to convert to a bitmap; must be in strictly ascending order
+     * @param bitUpperBound The exclusive largest bit. Each bit must be strictly less than this value.
+     * @dev Reverts if bitmap contains a bit greater than or equal to `bitUpperBound`
+     */
+    function orderedBytesArrayToBitmap(
+        bytes memory orderedBytesArray,
+        uint8 bitUpperBound
+    ) internal pure returns (uint256) {
+        uint256 bitmap = orderedBytesArrayToBitmap(orderedBytesArray);
+
+        require((1 << bitUpperBound) > bitmap, BitmapValueTooLarge());
+
+        return bitmap;
+    }
+
+    /**
+     * @notice Utility function for checking if a bytes array is strictly ordered, in ascending order.
+     * @param bytesArray the bytes array of interest
+     * @return Returns 'true' if the array is ordered in strictly ascending order, and 'false' otherwise.
+     * @dev This function returns 'true' for the edge case of the `bytesArray` having zero length.
+     * It also returns 'false' early for arrays with length in excess of MAX_BYTE_ARRAY_LENGTH (i.e. so long that they cannot be strictly ordered)
+     */
+    function isArrayStrictlyAscendingOrdered(
+        bytes calldata bytesArray
+    ) internal pure returns (bool) {
+        // Return early if the array is too long, or has a length of 0
+        if (bytesArray.length > MAX_BYTE_ARRAY_LENGTH) {
+            return false;
+        }
+
+        if (bytesArray.length == 0) {
+            return true;
+        }
+
+        // Perform the 0-th loop iteration by pulling the 0th byte out of the array
+        bytes1 singleByte = bytesArray[0];
+
+        // For each byte, validate that each entry is *strictly greater than* the previous
+        // If it isn't, return false as the array is not ordered
+        for (uint256 i = 1; i < bytesArray.length; ++i) {
+            if (uint256(uint8(bytesArray[i])) <= uint256(uint8(singleByte))) {
+                return false;
+            }
+
+            // Pull the next byte out of the array
+            singleByte = bytesArray[i];
+        }
+
+        return true;
+    }
+
+    /**
+     * @notice Converts a bitmap into an array of bytes.
+     * @param bitmap The bitmap to decompress/convert to an array of bytes.
+     * @return bytesArray The resulting bitmap array of bytes.
+     * @dev Each byte in the input is processed as indicating a single bit to flip in the bitmap
+     */
+    function bitmapToBytesArray(
+        uint256 bitmap
+    ) internal pure returns (bytes memory /*bytesArray*/ ) {
+        // initialize an empty uint256 to be used as a bitmask inside the loop
+        uint256 bitMask;
+        // allocate only the needed amount of memory
+        bytes memory bytesArray = new bytes(countNumOnes(bitmap));
+        // track the array index to assign to
+        uint256 arrayIndex = 0;
+        /**
+         * loop through each index in the bitmap to construct the array,
+         * but short-circuit the loop if we reach the number of ones and thus are done
+         * assigning to memory
+         */
+        for (uint256 i = 0; (arrayIndex < bytesArray.length) && (i < 256); ++i) {
+            // construct a single-bit mask for the i-th bit
+            bitMask = uint256(1 << i);
+            // check if the i-th bit is flipped in the bitmap
+            if (bitmap & bitMask != 0) {
+                // if the i-th bit is flipped, then add a byte encoding the value 'i' to the `bytesArray`
+                bytesArray[arrayIndex] = bytes1(uint8(i));
+                // increment the bytesArray slot since we've assigned one more byte of memory
+                unchecked {
+                    ++arrayIndex;
+                }
+            }
+        }
+        return bytesArray;
+    }
+
+    /// @return count number of ones in binary representation of `n`
+    function countNumOnes(
+        uint256 n
+    ) internal pure returns (uint16) {
+        uint16 count = 0;
+        while (n > 0) {
+            n &= (n - 1); // Clear the least significant bit (turn off the rightmost set bit).
+            count++; // Increment the count for each cleared bit (each one encountered).
+        }
+        return count; // Return the total count of ones in the binary representation of n.
+    }
+
+    /// @notice Returns `true` if `bit` is in `bitmap`. Returns `false` otherwise.
+    function isSet(uint256 bitmap, uint8 bit) internal pure returns (bool) {
+        return 1 == ((bitmap >> bit) & 1);
+    }
+
+    /**
+     * @notice Returns a copy of `bitmap` with `bit` set.
+     * @dev IMPORTANT: we're dealing with stack values here, so this doesn't modify
+     * the original bitmap. Using this correctly requires an assignment statement:
+     * `bitmap = bitmap.setBit(bit);`
+     */
+    function setBit(uint256 bitmap, uint8 bit) internal pure returns (uint256) {
+        return bitmap | (1 << bit);
+    }
+
+    /**
+     * @notice Returns true if `bitmap` has no set bits
+     */
+    function isEmpty(
+        uint256 bitmap
+    ) internal pure returns (bool) {
+        return bitmap == 0;
+    }
+
+    /**
+     * @notice Returns true if `a` and `b` have no common set bits
+     */
+    function noBitsInCommon(uint256 a, uint256 b) internal pure returns (bool) {
+        return a & b == 0;
+    }
+
+    /**
+     * @notice Returns true if `a` is a subset of `b`: ALL of the bits in `a` are also in `b`
+     */
+    function isSubsetOf(uint256 a, uint256 b) internal pure returns (bool) {
+        return a & b == a;
+    }
+
+    /**
+     * @notice Returns a new bitmap that contains all bits set in either `a` or `b`
+     * @dev Result is the union of `a` and `b`
+     */
+    function plus(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a | b;
+    }
+
+    /**
+     * @notice Returns a new bitmap that clears all set bits of `b` from `a`
+     * @dev Negates `b` and returns the intersection of the result with `a`
+     */
+    function minus(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a & ~b;
+    }
+
+    /**
+     * @notice Returns a new bitmap that contains only bits set in both `a` and `b`
+     * @dev Result is the intersection of `a` and `b`
+     */
+    function and(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a & b;
+    }
+}
+
+// lib/openzeppelin-contracts/contracts/utils/Context.sol
+
+// OpenZeppelin Contracts (last updated v4.9.4) (utils/Context.sol)
+
+/**
+ * @dev Provides information about the current execution context, including the
+ * sender of the transaction and its data. While these are generally available
+ * via msg.sender and msg.data, they should not be accessed in such a direct
+ * manner, since when dealing with meta-transactions the account sending and
+ * paying for execution may not be the actual sender (as far as an application
+ * is concerned).
+ *
+ * This contract is only required for intermediate, library-like contracts.
+ */
+abstract contract Context {
+    function _msgSender() internal view virtual returns (address) {
+        return msg.sender;
+    }
+
+    function _msgData() internal view virtual returns (bytes calldata) {
+        return msg.data;
+    }
+
+    function _contextSuffixLength() internal view virtual returns (uint256) {
+        return 0;
     }
 }
 
@@ -2264,6 +2761,149 @@ library SafeCastUpgradeable {
     }
 }
 
+// src/StateChangeHandlerLib.sol
+
+enum StateUpdateType {
+    STORE,
+    CALL,
+    LOG0,
+    LOG1,
+    LOG2,
+    LOG3,
+    LOG4
+}
+
+library StateChangeHandlerLib {
+    /// @notice Decodes and executes a series of state updates
+    /// @dev This function processes an array of state updates, executing them in sequence. Each update can be one of:
+    ///      - STORE: Direct storage writes using assembly
+    ///      - CALL: External contract calls with value transfer
+    ///      - LOG0-LOG4: Event emission with 0-4 indexed topics
+    /// @param types Array of StateUpdateType enums indicating the type of each state update operation
+    /// @param args Array of ABI-encoded arguments corresponding to each operation type
+    /// @dev types and args arrays must be equal length, with args[i] containing the encoded parameters for types[i]
+    function _runStateUpdates(StateUpdateType[] memory types, bytes[] memory args) internal {
+        require(types.length == args.length, InvalidArguments());
+        for (uint256 i = 0; i < types.length; i++) {
+            StateUpdateType stateUpdateType = types[i];
+            bytes memory arg = args[i];
+
+            if (stateUpdateType == StateUpdateType.STORE) {
+                (bytes32 slot, bytes32 value) = abi.decode(arg, (bytes32, bytes32));
+                assembly {
+                    sstore(slot, value)
+                }
+            } else if (stateUpdateType == StateUpdateType.CALL) {
+                (address target, uint256 value, bytes memory callargs) = abi.decode(arg, (address, uint256, bytes));
+                bool success;
+                // TOOD: might need better gas handling
+                uint256 callgas = gasleft();
+                assembly {
+                    success := call(callgas, target, value, add(callargs, 0x20), mload(callargs), 0, 0)
+                }
+                // TODO: this section needs heavy testing
+                if (!success) {
+                    uint256 _returndatasize;
+                    assembly {
+                        _returndatasize := returndatasize()
+                    }
+                    bytes memory revertData = new bytes(_returndatasize);
+                    assembly {
+                        returndatacopy(add(revertData, 0x20), 0, _returndatasize)
+                    }
+                    revert RevertingContext(i, target, revertData, callargs);
+                }
+            } else if (stateUpdateType == StateUpdateType.LOG0) {
+                // NOTE: For consistency I decode an abi encoding of bytes from bytes, but technically it's redundant
+                (bytes memory data) = abi.decode(arg, (bytes));
+                assembly {
+                    log0(add(data, 0x20), mload(data))
+                }
+            } else if (stateUpdateType == StateUpdateType.LOG1) {
+                (bytes memory data, bytes32 topic1) = abi.decode(arg, (bytes, bytes32));
+                assembly {
+                    log1(add(data, 0x20), mload(data), topic1)
+                }
+            } else if (stateUpdateType == StateUpdateType.LOG2) {
+                (bytes memory data, bytes32 topic1, bytes32 topic2) = abi.decode(arg, (bytes, bytes32, bytes32));
+                assembly {
+                    log2(add(data, 0x20), mload(data), topic1, topic2)
+                }
+            } else if (stateUpdateType == StateUpdateType.LOG3) {
+                (bytes memory data, bytes32 topic1, bytes32 topic2, bytes32 topic3) =
+                    abi.decode(arg, (bytes, bytes32, bytes32, bytes32));
+                assembly {
+                    log3(add(data, 0x20), mload(data), topic1, topic2, topic3)
+                }
+            } else if (stateUpdateType == StateUpdateType.LOG4) {
+                (bytes memory data, bytes32 topic1, bytes32 topic2, bytes32 topic3, bytes32 topic4) =
+                    abi.decode(arg, (bytes, bytes32, bytes32, bytes32, bytes32));
+                assembly {
+                    log4(add(data, 0x20), mload(data), topic1, topic2, topic3, topic4)
+                }
+            }
+        }
+    }
+
+    error InvalidArguments();
+    error RevertingContext(uint256 index, address target, bytes revertData, bytes callargs);
+}
+
+// src/StateTracker.sol
+
+/**
+ * @title StateTracker
+ * @notice A contract that tracks state transitions using a storage slot
+ * @dev This contract provides functionality to track the number of state transitions
+ *      that have occurred in a contract. It uses a precomputed storage slot to store
+ *      the transition count.
+ *
+ *      The storage slot is computed as:
+ *      keccak256("gasKiller.stateTracker") - 1
+ *
+ *      This contract is meant to be inherited by other contracts that need to track
+ *      their state transitions for Gas Killer functionality.
+ */
+contract StateTracker {
+    /**
+     * @notice The precomputed storage slot for tracking state transitions
+     * @dev This slot is computed as keccak256("gasKiller.stateTracker") - 1
+     *      It is used to store the number of state transitions that have occurred
+     */
+    bytes32 internal constant STATE_TRACKER_STORAGE_LOCATION =
+        0xdebfdfd5a50ad117c10898d68b5ccf0893c6b40d4f443f902e2e7646601bdeaf;
+
+    /**
+     * @notice Modifier that increments the state transition counter
+     * @dev This modifier should be used on functions that modify the contract's state
+     *      and need to be tracked for Gas Killer functionality.
+     *
+     *      The modifier:
+     *      1. Loads the current transition count from storage
+     *      2. Increments it by 1
+     *      3. Stores the new count back to storage
+     *      4. Executes the modified function
+     */
+    modifier trackState() {
+        assembly {
+            let count := sload(STATE_TRACKER_STORAGE_LOCATION)
+            sstore(STATE_TRACKER_STORAGE_LOCATION, add(0x01, count))
+        }
+        _;
+    }
+
+    /**
+     * @notice Returns the current number of state transitions
+     * @return count The number of state transitions that have occurred
+     * @dev This function reads the transition count directly from storage
+     */
+    function stateTransitionCount() public view returns (uint256 count) {
+        assembly {
+            count := sload(STATE_TRACKER_STORAGE_LOCATION)
+        }
+    }
+}
+
 // lib/eigenlayer-middleware/src/interfaces/IBLSApkRegistry.sol
 
 interface IBLSApkRegistryErrors {
@@ -2617,6 +3257,287 @@ interface ISignatureUtilsMixin is ISignatureUtilsMixinErrors, ISignatureUtilsMix
     function domainSeparator() external view returns (bytes32);
 }
 
+// lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol
+
+// OpenZeppelin Contracts (last updated v4.9.0) (proxy/utils/Initializable.sol)
+
+/**
+ * @dev This is a base contract to aid in writing upgradeable contracts, or any kind of contract that will be deployed
+ * behind a proxy. Since proxied contracts do not make use of a constructor, it's common to move constructor logic to an
+ * external initializer function, usually called `initialize`. It then becomes necessary to protect this initializer
+ * function so it can only be called once. The {initializer} modifier provided by this contract will have this effect.
+ *
+ * The initialization functions use a version number. Once a version number is used, it is consumed and cannot be
+ * reused. This mechanism prevents re-execution of each "step" but allows the creation of new initialization steps in
+ * case an upgrade adds a module that needs to be initialized.
+ *
+ * For example:
+ *
+ * [.hljs-theme-light.nopadding]
+ * ```solidity
+ * contract MyToken is ERC20Upgradeable {
+ *     function initialize() initializer public {
+ *         __ERC20_init("MyToken", "MTK");
+ *     }
+ * }
+ *
+ * contract MyTokenV2 is MyToken, ERC20PermitUpgradeable {
+ *     function initializeV2() reinitializer(2) public {
+ *         __ERC20Permit_init("MyToken");
+ *     }
+ * }
+ * ```
+ *
+ * TIP: To avoid leaving the proxy in an uninitialized state, the initializer function should be called as early as
+ * possible by providing the encoded function call as the `_data` argument to {ERC1967Proxy-constructor}.
+ *
+ * CAUTION: When used with inheritance, manual care must be taken to not invoke a parent initializer twice, or to ensure
+ * that all initializers are idempotent. This is not verified automatically as constructors are by Solidity.
+ *
+ * [CAUTION]
+ * ====
+ * Avoid leaving a contract uninitialized.
+ *
+ * An uninitialized contract can be taken over by an attacker. This applies to both a proxy and its implementation
+ * contract, which may impact the proxy. To prevent the implementation contract from being used, you should invoke
+ * the {_disableInitializers} function in the constructor to automatically lock it when it is deployed:
+ *
+ * [.hljs-theme-light.nopadding]
+ * ```
+ * /// @custom:oz-upgrades-unsafe-allow constructor
+ * constructor() {
+ *     _disableInitializers();
+ * }
+ * ```
+ * ====
+ */
+abstract contract Initializable {
+    /**
+     * @dev Indicates that the contract has been initialized.
+     * @custom:oz-retyped-from bool
+     */
+    uint8 private _initialized;
+
+    /**
+     * @dev Indicates that the contract is in the process of being initialized.
+     */
+    bool private _initializing;
+
+    /**
+     * @dev Triggered when the contract has been initialized or reinitialized.
+     */
+    event Initialized(uint8 version);
+
+    /**
+     * @dev A modifier that defines a protected initializer function that can be invoked at most once. In its scope,
+     * `onlyInitializing` functions can be used to initialize parent contracts.
+     *
+     * Similar to `reinitializer(1)`, except that functions marked with `initializer` can be nested in the context of a
+     * constructor.
+     *
+     * Emits an {Initialized} event.
+     */
+    modifier initializer() {
+        bool isTopLevelCall = !_initializing;
+        require(
+            (isTopLevelCall && _initialized < 1) || (!AddressUpgradeable.isContract(address(this)) && _initialized == 1),
+            "Initializable: contract is already initialized"
+        );
+        _initialized = 1;
+        if (isTopLevelCall) {
+            _initializing = true;
+        }
+        _;
+        if (isTopLevelCall) {
+            _initializing = false;
+            emit Initialized(1);
+        }
+    }
+
+    /**
+     * @dev A modifier that defines a protected reinitializer function that can be invoked at most once, and only if the
+     * contract hasn't been initialized to a greater version before. In its scope, `onlyInitializing` functions can be
+     * used to initialize parent contracts.
+     *
+     * A reinitializer may be used after the original initialization step. This is essential to configure modules that
+     * are added through upgrades and that require initialization.
+     *
+     * When `version` is 1, this modifier is similar to `initializer`, except that functions marked with `reinitializer`
+     * cannot be nested. If one is invoked in the context of another, execution will revert.
+     *
+     * Note that versions can jump in increments greater than 1; this implies that if multiple reinitializers coexist in
+     * a contract, executing them in the right order is up to the developer or operator.
+     *
+     * WARNING: setting the version to 255 will prevent any future reinitialization.
+     *
+     * Emits an {Initialized} event.
+     */
+    modifier reinitializer(uint8 version) {
+        require(!_initializing && _initialized < version, "Initializable: contract is already initialized");
+        _initialized = version;
+        _initializing = true;
+        _;
+        _initializing = false;
+        emit Initialized(version);
+    }
+
+    /**
+     * @dev Modifier to protect an initialization function so that it can only be invoked by functions with the
+     * {initializer} and {reinitializer} modifiers, directly or indirectly.
+     */
+    modifier onlyInitializing() {
+        require(_initializing, "Initializable: contract is not initializing");
+        _;
+    }
+
+    /**
+     * @dev Locks the contract, preventing any future reinitialization. This cannot be part of an initializer call.
+     * Calling this in the constructor of a contract will prevent that contract from being initialized or reinitialized
+     * to any version. It is recommended to use this to lock implementation contracts that are designed to be called
+     * through proxies.
+     *
+     * Emits an {Initialized} event the first time it is successfully executed.
+     */
+    function _disableInitializers() internal virtual {
+        require(!_initializing, "Initializable: contract is initializing");
+        if (_initialized != type(uint8).max) {
+            _initialized = type(uint8).max;
+            emit Initialized(type(uint8).max);
+        }
+    }
+
+    /**
+     * @dev Returns the highest version that has been initialized. See {reinitializer}.
+     */
+    function _getInitializedVersion() internal view returns (uint8) {
+        return _initialized;
+    }
+
+    /**
+     * @dev Returns `true` if the contract is currently initializing. See {onlyInitializing}.
+     */
+    function _isInitializing() internal view returns (bool) {
+        return _initializing;
+    }
+}
+
+// lib/openzeppelin-contracts/contracts/access/Ownable.sol
+
+// OpenZeppelin Contracts (last updated v4.9.0) (access/Ownable.sol)
+
+/**
+ * @dev Contract module which provides a basic access control mechanism, where
+ * there is an account (an owner) that can be granted exclusive access to
+ * specific functions.
+ *
+ * By default, the owner account will be the one that deploys the contract. This
+ * can later be changed with {transferOwnership}.
+ *
+ * This module is used through inheritance. It will make available the modifier
+ * `onlyOwner`, which can be applied to your functions to restrict their use to
+ * the owner.
+ */
+abstract contract Ownable is Context {
+    address private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Initializes the contract setting the deployer as the initial owner.
+     */
+    constructor() {
+        _transferOwnership(_msgSender());
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        _checkOwner();
+        _;
+    }
+
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if the sender is not the owner.
+     */
+    function _checkOwner() internal view virtual {
+        require(owner() == _msgSender(), "Ownable: caller is not the owner");
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby disabling any functionality that is only available to the owner.
+     */
+    function renounceOwnership() public virtual onlyOwner {
+        _transferOwnership(address(0));
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+}
+
+// lib/openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol
+
+// OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
+
+/**
+ * @dev Provides information about the current execution context, including the
+ * sender of the transaction and its data. While these are generally available
+ * via msg.sender and msg.data, they should not be accessed in such a direct
+ * manner, since when dealing with meta-transactions the account sending and
+ * paying for execution may not be the actual sender (as far as an application
+ * is concerned).
+ *
+ * This contract is only required for intermediate, library-like contracts.
+ */
+abstract contract ContextUpgradeable is Initializable {
+    function __Context_init() internal onlyInitializing {
+    }
+
+    function __Context_init_unchained() internal onlyInitializing {
+    }
+    function _msgSender() internal view virtual returns (address) {
+        return msg.sender;
+    }
+
+    function _msgData() internal view virtual returns (bytes calldata) {
+        return msg.data;
+    }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[50] private __gap;
+}
+
 // lib/eigenlayer-middleware/lib/eigenlayer-contracts/src/contracts/libraries/SlashingLib.sol
 
 /// @dev All scaling factors have `1e18` as an initial/default value. This value is represented
@@ -2796,6 +3717,98 @@ library SlashingLib {
         // round up mulDiv so we don't overslash
         return operatorShares - operatorShares.mulDiv(newMaxMagnitude, prevMaxMagnitude, Math.Rounding.Up);
     }
+}
+
+// lib/openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol
+
+// OpenZeppelin Contracts (last updated v4.9.0) (access/Ownable.sol)
+
+/**
+ * @dev Contract module which provides a basic access control mechanism, where
+ * there is an account (an owner) that can be granted exclusive access to
+ * specific functions.
+ *
+ * By default, the owner account will be the one that deploys the contract. This
+ * can later be changed with {transferOwnership}.
+ *
+ * This module is used through inheritance. It will make available the modifier
+ * `onlyOwner`, which can be applied to your functions to restrict their use to
+ * the owner.
+ */
+abstract contract OwnableUpgradeable is Initializable, ContextUpgradeable {
+    address private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Initializes the contract setting the deployer as the initial owner.
+     */
+    function __Ownable_init() internal onlyInitializing {
+        __Ownable_init_unchained();
+    }
+
+    function __Ownable_init_unchained() internal onlyInitializing {
+        _transferOwnership(_msgSender());
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        _checkOwner();
+        _;
+    }
+
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if the sender is not the owner.
+     */
+    function _checkOwner() internal view virtual {
+        require(owner() == _msgSender(), "Ownable: caller is not the owner");
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby disabling any functionality that is only available to the owner.
+     */
+    function renounceOwnership() public virtual onlyOwner {
+        _transferOwnership(address(0));
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[49] private __gap;
 }
 
 // lib/eigenlayer-middleware/lib/eigenlayer-contracts/src/contracts/interfaces/IStrategy.sol
@@ -5320,6 +6333,39 @@ interface IBLSSignatureChecker is IBLSSignatureCheckerErrors, IBLSSignatureCheck
     ) external view returns (bool pairingSuccessful, bool siganatureIsValid);
 }
 
+// lib/eigenlayer-middleware/src/BLSSignatureCheckerStorage.sol
+
+abstract contract BLSSignatureCheckerStorage is IBLSSignatureChecker {
+    /// @dev Returns the assumed gas cost of multiplying 2 pairings.
+    uint256 internal constant PAIRING_EQUALITY_CHECK_GAS = 120000;
+
+    /// @inheritdoc IBLSSignatureChecker
+    ISlashingRegistryCoordinator public immutable registryCoordinator;
+    /// @inheritdoc IBLSSignatureChecker
+    IStakeRegistry public immutable stakeRegistry;
+    /// @inheritdoc IBLSSignatureChecker
+    IBLSApkRegistry public immutable blsApkRegistry;
+    /// @inheritdoc IBLSSignatureChecker
+    IDelegationManager public immutable delegation;
+
+    /// STATE
+
+    /// @inheritdoc IBLSSignatureChecker
+    bool public staleStakesForbidden;
+
+    constructor(
+        ISlashingRegistryCoordinator _registryCoordinator
+    ) {
+        registryCoordinator = _registryCoordinator;
+        stakeRegistry = _registryCoordinator.stakeRegistry();
+        blsApkRegistry = _registryCoordinator.blsApkRegistry();
+        delegation = stakeRegistry.delegation();
+    }
+
+    // slither-disable-next-line shadowing-state
+    uint256[49] private __GAP;
+}
+
 // src/interface/IGasKillerSDK.sol
 
 /**
@@ -5356,4 +6402,441 @@ interface IGasKillerSDK is IERC165 {
         bytes4 targetFunction,
         IBLSSignatureCheckerTypes.NonSignerStakesAndSignature calldata nonSignerStakesAndSignature
     ) external;
+}
+
+// lib/eigenlayer-middleware/src/BLSSignatureChecker.sol
+
+/**
+ * @title Used for checking BLS aggregate signatures from the operators of a `BLSRegistry`.
+ * @author Layr Labs, Inc.
+ * @notice Terms of Service: https://docs.eigenlayer.xyz/overview/terms-of-service
+ * @notice This is the contract for checking the validity of aggregate operator signatures.
+ */
+contract BLSSignatureChecker is BLSSignatureCheckerStorage {
+    using BN254 for BN254.G1Point;
+
+    /// MODIFIERS
+
+    modifier onlyCoordinatorOwner() {
+        require(
+            msg.sender == Ownable(address(registryCoordinator)).owner(),
+            OnlyRegistryCoordinatorOwner()
+        );
+        _;
+    }
+
+    /// CONSTRUCTION
+
+    constructor(
+        ISlashingRegistryCoordinator _registryCoordinator
+    ) BLSSignatureCheckerStorage(_registryCoordinator) {}
+
+    /// ACTIONS
+
+    /// @inheritdoc IBLSSignatureChecker
+    function setStaleStakesForbidden(
+        bool value
+    ) external onlyCoordinatorOwner {
+        _setStaleStakesForbidden(value);
+    }
+
+    /// VIEW
+
+    /// @inheritdoc IBLSSignatureChecker
+    function checkSignatures(
+        bytes32 msgHash,
+        bytes calldata quorumNumbers,
+        uint32 referenceBlockNumber,
+        NonSignerStakesAndSignature memory params
+    ) public view returns (QuorumStakeTotals memory, bytes32) {
+        require(quorumNumbers.length != 0, InputEmptyQuorumNumbers());
+
+        require(
+            (quorumNumbers.length == params.quorumApks.length)
+                && (quorumNumbers.length == params.quorumApkIndices.length)
+                && (quorumNumbers.length == params.totalStakeIndices.length)
+                && (quorumNumbers.length == params.nonSignerStakeIndices.length),
+            InputArrayLengthMismatch()
+        );
+
+        require(
+            params.nonSignerPubkeys.length == params.nonSignerQuorumBitmapIndices.length,
+            InputNonSignerLengthMismatch()
+        );
+
+        require(referenceBlockNumber < uint32(block.number), InvalidReferenceBlocknumber());
+
+        // This method needs to calculate the aggregate pubkey for all signing operators across
+        // all signing quorums. To do that, we can query the aggregate pubkey for each quorum
+        // and subtract out the pubkey for each nonsigning operator registered to that quorum.
+        //
+        // In practice, we do this in reverse - calculating an aggregate pubkey for all nonsigners,
+        // negating that pubkey, then adding the aggregate pubkey for each quorum.
+        BN254.G1Point memory apk = BN254.G1Point(0, 0);
+
+        // For each quorum, we're also going to query the total stake for all registered operators
+        // at the referenceBlockNumber, and derive the stake held by signers by subtracting out
+        // stakes held by nonsigners.
+        QuorumStakeTotals memory stakeTotals;
+        stakeTotals.totalStakeForQuorum = new uint96[](quorumNumbers.length);
+        stakeTotals.signedStakeForQuorum = new uint96[](quorumNumbers.length);
+
+        NonSignerInfo memory nonSigners;
+        nonSigners.quorumBitmaps = new uint256[](params.nonSignerPubkeys.length);
+        nonSigners.pubkeyHashes = new bytes32[](params.nonSignerPubkeys.length);
+
+        {
+            // Get a bitmap of the quorums signing the message, and validate that
+            // quorumNumbers contains only unique, valid quorum numbers
+            uint256 signingQuorumBitmap = BitmapUtils.orderedBytesArrayToBitmap(
+                quorumNumbers, registryCoordinator.quorumCount()
+            );
+
+            for (uint256 j = 0; j < params.nonSignerPubkeys.length; j++) {
+                // The nonsigner's pubkey hash doubles as their operatorId
+                // The check below validates that these operatorIds are sorted (and therefore
+                // free of duplicates)
+                nonSigners.pubkeyHashes[j] = params.nonSignerPubkeys[j].hashG1Point();
+                if (j != 0) {
+                    require(
+                        uint256(nonSigners.pubkeyHashes[j])
+                            > uint256(nonSigners.pubkeyHashes[j - 1]),
+                        NonSignerPubkeysNotSorted()
+                    );
+                }
+
+                // Get the quorums the nonsigner was registered for at referenceBlockNumber
+                nonSigners.quorumBitmaps[j] = registryCoordinator
+                    .getQuorumBitmapAtBlockNumberByIndex({
+                    operatorId: nonSigners.pubkeyHashes[j],
+                    blockNumber: referenceBlockNumber,
+                    index: params.nonSignerQuorumBitmapIndices[j]
+                });
+
+                // Add the nonsigner's pubkey to the total apk, multiplied by the number
+                // of quorums they have in common with the signing quorums, because their
+                // public key will be a part of each signing quorum's aggregate pubkey
+                apk = apk.plus(
+                    params.nonSignerPubkeys[j].scalar_mul_tiny(
+                        BitmapUtils.countNumOnes(nonSigners.quorumBitmaps[j] & signingQuorumBitmap)
+                    )
+                );
+            }
+        }
+
+        // Negate the sum of the nonsigner aggregate pubkeys - from here, we'll add the
+        // total aggregate pubkey from each quorum. Because the nonsigners' pubkeys are
+        // in these quorums, this initial negation ensures they're cancelled out
+        apk = apk.negate();
+
+        /**
+         * For each quorum (at referenceBlockNumber):
+         * - add the apk for all registered operators
+         * - query the total stake for each quorum
+         * - subtract the stake for each nonsigner to calculate the stake belonging to signers
+         */
+        {
+            bool _staleStakesForbidden = staleStakesForbidden;
+            uint256 withdrawalDelayBlocks =
+                _staleStakesForbidden ? delegation.minWithdrawalDelayBlocks() : 0;
+
+            for (uint256 i = 0; i < quorumNumbers.length; i++) {
+                // If we're disallowing stale stake updates, check that each quorum's last update block
+                // is within withdrawalDelayBlocks
+                if (_staleStakesForbidden) {
+                    require(
+                        registryCoordinator.quorumUpdateBlockNumber(uint8(quorumNumbers[i]))
+                            + withdrawalDelayBlocks > referenceBlockNumber,
+                        StaleStakesForbidden()
+                    );
+                }
+
+                // Validate params.quorumApks is correct for this quorum at the referenceBlockNumber,
+                // then add it to the total apk
+                require(
+                    bytes24(params.quorumApks[i].hashG1Point())
+                        == blsApkRegistry.getApkHashAtBlockNumberAndIndex({
+                            quorumNumber: uint8(quorumNumbers[i]),
+                            blockNumber: referenceBlockNumber,
+                            index: params.quorumApkIndices[i]
+                        }),
+                    InvalidQuorumApkHash()
+                );
+                apk = apk.plus(params.quorumApks[i]);
+
+                // Get the total and starting signed stake for the quorum at referenceBlockNumber
+                stakeTotals.totalStakeForQuorum[i] = stakeRegistry
+                    .getTotalStakeAtBlockNumberFromIndex({
+                    quorumNumber: uint8(quorumNumbers[i]),
+                    blockNumber: referenceBlockNumber,
+                    index: params.totalStakeIndices[i]
+                });
+                stakeTotals.signedStakeForQuorum[i] = stakeTotals.totalStakeForQuorum[i];
+
+                // Keep track of the nonSigners index in the quorum
+                uint256 nonSignerForQuorumIndex = 0;
+
+                // loop through all nonSigners, checking that they are a part of the quorum via their quorumBitmap
+                // if so, load their stake at referenceBlockNumber and subtract it from running stake signed
+                for (uint256 j = 0; j < params.nonSignerPubkeys.length; j++) {
+                    // if the nonSigner is a part of the quorum, subtract their stake from the running total
+                    if (BitmapUtils.isSet(nonSigners.quorumBitmaps[j], uint8(quorumNumbers[i]))) {
+                        stakeTotals.signedStakeForQuorum[i] -= stakeRegistry
+                            .getStakeAtBlockNumberAndIndex({
+                            quorumNumber: uint8(quorumNumbers[i]),
+                            blockNumber: referenceBlockNumber,
+                            operatorId: nonSigners.pubkeyHashes[j],
+                            index: params.nonSignerStakeIndices[i][nonSignerForQuorumIndex]
+                        });
+                        unchecked {
+                            ++nonSignerForQuorumIndex;
+                        }
+                    }
+                }
+            }
+        }
+        {
+            // verify the signature
+            (bool pairingSuccessful, bool signatureIsValid) =
+                trySignatureAndApkVerification(msgHash, apk, params.apkG2, params.sigma);
+            require(pairingSuccessful, InvalidBLSPairingKey());
+            require(signatureIsValid, InvalidBLSSignature());
+        }
+        // set signatoryRecordHash variable used for fraudproofs
+        bytes32 signatoryRecordHash =
+            keccak256(abi.encodePacked(referenceBlockNumber, nonSigners.pubkeyHashes));
+
+        // return the total stakes that signed for each quorum, and a hash of the information required to prove the exact signers and stake
+        return (stakeTotals, signatoryRecordHash);
+    }
+
+    /// @inheritdoc IBLSSignatureChecker
+    function trySignatureAndApkVerification(
+        bytes32 msgHash,
+        BN254.G1Point memory apk,
+        BN254.G2Point memory apkG2,
+        BN254.G1Point memory sigma
+    ) public view returns (bool pairingSuccessful, bool siganatureIsValid) {
+        // gamma = keccak256(abi.encodePacked(msgHash, apk, apkG2, sigma))
+        uint256 gamma = uint256(
+            keccak256(
+                abi.encodePacked(
+                    msgHash,
+                    apk.X,
+                    apk.Y,
+                    apkG2.X[0],
+                    apkG2.X[1],
+                    apkG2.Y[0],
+                    apkG2.Y[1],
+                    sigma.X,
+                    sigma.Y
+                )
+            )
+        ) % BN254.FR_MODULUS;
+        // verify the signature
+        (pairingSuccessful, siganatureIsValid) = BN254.safePairing(
+            sigma.plus(apk.scalar_mul(gamma)),
+            BN254.negGeneratorG2(),
+            BN254.hashToG1(msgHash).plus(BN254.generatorG1().scalar_mul(gamma)),
+            apkG2,
+            PAIRING_EQUALITY_CHECK_GAS
+        );
+    }
+
+    function _setStaleStakesForbidden(
+        bool value
+    ) internal {
+        staleStakesForbidden = value;
+        emit StaleStakesForbiddenUpdate(value);
+    }
+}
+
+// src/upgradeable/GasKillerSDK.sol
+
+/**
+ * @title GasKillerSDK
+ * @notice Base SDK for implementing Gas Killer functionality in contracts
+ * @dev Inherit from this contract to add Gas Killer capabilities to your contract
+ */
+abstract contract GasKillerSDK is StateTracker, Initializable, IGasKillerSDK {
+    /// @custom:storage-location erc7201:gaskiller.GasKillerSDK.storage
+    struct GasKillerSDKStorage {
+        bytes namespace; // Namespace for the contract
+        address avsAddress; // The AVS service manager address
+        BLSSignatureChecker blsSignatureChecker; // The BLS signature checker contract
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("gaskiller.GasKillerSDK.storage")) - 1)) & ~bytes32(uint256(0xff));
+    bytes32 private constant GAS_KILLER_SDK_STORAGE_LOCATION =
+        0x321ebf629ed2e1e368f0890e8fdd95cf9a2ae5961b66a1805f0b2ec84e21d000;
+
+    // Constants for stake threshold checking
+    uint8 public constant THRESHOLD_DENOMINATOR = 100;
+    uint8 public constant QUORUM_THRESHOLD = 66; // 66% quorum threshold
+    uint32 public constant BLOCK_STALE_MEASURE = 300;
+
+    /// @notice Initializes the contract
+    function initialize(address _avsAddress, address _blsSignatureChecker) public initializer {
+        GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
+        $.avsAddress = _avsAddress;
+        $.blsSignatureChecker = BLSSignatureChecker(_blsSignatureChecker);
+        $.namespace = abi.encodePacked($.avsAddress, "gaskiller");
+    }
+
+    /**
+     * @notice Function to verify if a signature is valid and contains correct storage updates
+     * @param msgHash The hash of the message to verify
+     * @param quorumNumbers The quorum numbers to check signatures for
+     * @param referenceBlockNumber The block number to use as reference for operator set
+     * @param storageUpdates The storage updates to verify
+     * @param transitionIndex The transition index
+     * @param targetFunction The target function selector
+     * @param nonSignerStakesAndSignature The non-signer stakes and signature data computed off-chain
+     */
+    function verifyAndUpdate(
+        bytes32 msgHash,
+        bytes calldata quorumNumbers,
+        uint32 referenceBlockNumber,
+        bytes calldata storageUpdates,
+        uint256 transitionIndex,
+        bytes4 targetFunction,
+        IBLSSignatureCheckerTypes.NonSignerStakesAndSignature calldata nonSignerStakesAndSignature
+    ) external trackState {
+        GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
+
+        // Check block number validity
+        require(referenceBlockNumber < block.number, FutureBlockNumber());
+        require((referenceBlockNumber + BLOCK_STALE_MEASURE) >= uint32(block.number), StaleBlockNumber());
+
+        // Verify transition index and message hash
+        require(transitionIndex + 1 == stateTransitionCount(), InvalidTransitionIndex());
+        bytes32 expectedHash = sha256(abi.encode(transitionIndex, address(this), targetFunction, storageUpdates));
+        require(expectedHash == msgHash, InvalidSignature());
+
+        // Verify the signatures using checkSignatures
+        (IBLSSignatureCheckerTypes.QuorumStakeTotals memory stakeTotals,) = $.blsSignatureChecker
+            .checkSignatures(msgHash, quorumNumbers, referenceBlockNumber, nonSignerStakesAndSignature);
+
+        // Check that signatories own at least 66% of each quorum
+        for (uint256 i = 0; i < quorumNumbers.length; i++) {
+            require(
+                stakeTotals.signedStakeForQuorum[i] * THRESHOLD_DENOMINATOR
+                    >= stakeTotals.totalStakeForQuorum[i] * QUORUM_THRESHOLD,
+                InsufficientQuorumThreshold()
+            );
+        }
+
+        // Apply the state changes
+        _stateChangeHandler(storageUpdates);
+    }
+
+    /**
+     * @notice Query if a contract implements an interface
+     * @param interfaceId The interface identifier, as specified in ERC-165
+     * @return `true` if the contract implements `interfaceId` and `false` otherwise
+     * @dev This implementation supports ERC165 and IGasKillerSDK interface detection
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(IERC165).interfaceId || interfaceId == type(IGasKillerSDK).interfaceId;
+    }
+
+    /**
+     * @notice Function to get the expected hash for a given transition index, target function, and storage updates
+     * @param transitionIndex The transition index
+     * @param targetFunction The target function selector
+     * @param storageUpdates The storage updates
+     * @return bytes32 The expected hash
+     */
+    function getMessageHash(uint256 transitionIndex, bytes4 targetFunction, bytes calldata storageUpdates)
+        external
+        view
+        returns (bytes32)
+    {
+        return sha256(abi.encode(transitionIndex, address(this), targetFunction, storageUpdates));
+    }
+
+    /**
+     * @notice Function to get the AVS address
+     * @return address The AVS address
+     */
+    function getAvsAddress() external view returns (address) {
+        return _getGasKillerSDKStorage().avsAddress;
+    }
+
+    /**
+     * @notice Function to get the BLS signature checker address
+     * @return address The BLS signature checker address
+     */
+    function getBlsSignatureChecker() external view returns (address) {
+        return address(_getGasKillerSDKStorage().blsSignatureChecker);
+    }
+
+    /**
+     * @notice Function to get the namespace
+     * @return bytes The namespace
+     */
+    function getNamespace() external view returns (bytes memory) {
+        return _getGasKillerSDKStorage().namespace;
+    }
+
+    /**
+     * @notice Function to apply storage updates
+     * @param storageUpdates The storage updates to apply
+     */
+    function _stateChangeHandler(bytes calldata storageUpdates) internal {
+        (StateUpdateType[] memory types, bytes[] memory args) = abi.decode(storageUpdates, (StateUpdateType[], bytes[]));
+        StateChangeHandlerLib._runStateUpdates(types, args);
+    }
+
+    /**
+     * @notice Internal function to set the AVS address
+     * @dev Namespace is used to identify the contract in the AVS service manager
+     * @param _avsAddress The new AVS address
+     */
+    function _setAvsAddress(address _avsAddress) internal {
+        GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
+        $.avsAddress = _avsAddress;
+        $.namespace = abi.encodePacked($.avsAddress, "gaskiller");
+    }
+
+    /**
+     * @notice Internal function to get the GasKillerSDK storage
+     * @return $ The GasKillerSDK storage struct
+     */
+    function _getGasKillerSDKStorage() private pure returns (GasKillerSDKStorage storage $) {
+        assembly {
+            $.slot := GAS_KILLER_SDK_STORAGE_LOCATION
+        }
+    }
+}
+
+// src/upgradeable/GasKillerSDKOwnable.sol
+
+/**
+ * @title GasKillerSDKOwnable
+ * @notice Upgradeable GasKillerSDK with Ownable access control
+ */
+abstract contract GasKillerSDKOwnable is GasKillerSDK, OwnableUpgradeable {
+    /// @notice Initializes the contract with AVS address and BLS Signature Checker, and sets the owner
+    /// @param _avsAddress The address of the AVS service manager
+    /// @param _blsSignatureChecker The address of the BLS signature checker
+    /// @param _owner The address to set as the contract owner
+    function initialize(address _avsAddress, address _blsSignatureChecker, address _owner) public virtual initializer {
+        __Ownable_init();
+        _transferOwnership(_owner);
+        GasKillerSDK.initialize(_avsAddress, _blsSignatureChecker);
+    }
+
+    /// @notice Disables initializers for the contract
+    function _disableInitializers() internal override(Initializable) {
+        super._disableInitializers();
+    }
+
+    /**
+     * @dev Example: Restricts setting AVS address to only owner.
+     * If you want owner-only admin functions, you can add them like this:
+     */
+    function setAvsAddress(address newAvsAddress) external onlyOwner {
+        _setAvsAddress(newAvsAddress);
+    }
 }

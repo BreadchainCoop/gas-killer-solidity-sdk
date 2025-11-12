@@ -1,5 +1,249 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity >=0.5.0 >=0.6.2 ^0.8.0 ^0.8.27;
+pragma solidity >=0.5.0 >=0.6.2 ^0.8.0 ^0.8.1 ^0.8.2 ^0.8.27;
+
+// lib/openzeppelin-contracts-upgradeable/contracts/utils/AddressUpgradeable.sol
+
+// OpenZeppelin Contracts (last updated v4.9.0) (utils/Address.sol)
+
+/**
+ * @dev Collection of functions related to the address type
+ */
+library AddressUpgradeable {
+    /**
+     * @dev Returns true if `account` is a contract.
+     *
+     * [IMPORTANT]
+     * ====
+     * It is unsafe to assume that an address for which this function returns
+     * false is an externally-owned account (EOA) and not a contract.
+     *
+     * Among others, `isContract` will return false for the following
+     * types of addresses:
+     *
+     *  - an externally-owned account
+     *  - a contract in construction
+     *  - an address where a contract will be created
+     *  - an address where a contract lived, but was destroyed
+     *
+     * Furthermore, `isContract` will also return true if the target contract within
+     * the same transaction is already scheduled for destruction by `SELFDESTRUCT`,
+     * which only has an effect at the end of a transaction.
+     * ====
+     *
+     * [IMPORTANT]
+     * ====
+     * You shouldn't rely on `isContract` to protect against flash loan attacks!
+     *
+     * Preventing calls from contracts is highly discouraged. It breaks composability, breaks support for smart wallets
+     * like Gnosis Safe, and does not provide security since it can be circumvented by calling from a contract
+     * constructor.
+     * ====
+     */
+    function isContract(address account) internal view returns (bool) {
+        // This method relies on extcodesize/address.code.length, which returns 0
+        // for contracts in construction, since the code is only stored at the end
+        // of the constructor execution.
+
+        return account.code.length > 0;
+    }
+
+    /**
+     * @dev Replacement for Solidity's `transfer`: sends `amount` wei to
+     * `recipient`, forwarding all available gas and reverting on errors.
+     *
+     * https://eips.ethereum.org/EIPS/eip-1884[EIP1884] increases the gas cost
+     * of certain opcodes, possibly making contracts go over the 2300 gas limit
+     * imposed by `transfer`, making them unable to receive funds via
+     * `transfer`. {sendValue} removes this limitation.
+     *
+     * https://consensys.net/diligence/blog/2019/09/stop-using-soliditys-transfer-now/[Learn more].
+     *
+     * IMPORTANT: because control is transferred to `recipient`, care must be
+     * taken to not create reentrancy vulnerabilities. Consider using
+     * {ReentrancyGuard} or the
+     * https://solidity.readthedocs.io/en/v0.8.0/security-considerations.html#use-the-checks-effects-interactions-pattern[checks-effects-interactions pattern].
+     */
+    function sendValue(address payable recipient, uint256 amount) internal {
+        require(address(this).balance >= amount, "Address: insufficient balance");
+
+        (bool success, ) = recipient.call{value: amount}("");
+        require(success, "Address: unable to send value, recipient may have reverted");
+    }
+
+    /**
+     * @dev Performs a Solidity function call using a low level `call`. A
+     * plain `call` is an unsafe replacement for a function call: use this
+     * function instead.
+     *
+     * If `target` reverts with a revert reason, it is bubbled up by this
+     * function (like regular Solidity function calls).
+     *
+     * Returns the raw returned data. To convert to the expected return value,
+     * use https://solidity.readthedocs.io/en/latest/units-and-global-variables.html?highlight=abi.decode#abi-encoding-and-decoding-functions[`abi.decode`].
+     *
+     * Requirements:
+     *
+     * - `target` must be a contract.
+     * - calling `target` with `data` must not revert.
+     *
+     * _Available since v3.1._
+     */
+    function functionCall(address target, bytes memory data) internal returns (bytes memory) {
+        return functionCallWithValue(target, data, 0, "Address: low-level call failed");
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`], but with
+     * `errorMessage` as a fallback revert reason when `target` reverts.
+     *
+     * _Available since v3.1._
+     */
+    function functionCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
+        return functionCallWithValue(target, data, 0, errorMessage);
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+     * but also transferring `value` wei to `target`.
+     *
+     * Requirements:
+     *
+     * - the calling contract must have an ETH balance of at least `value`.
+     * - the called Solidity function must be `payable`.
+     *
+     * _Available since v3.1._
+     */
+    function functionCallWithValue(address target, bytes memory data, uint256 value) internal returns (bytes memory) {
+        return functionCallWithValue(target, data, value, "Address: low-level call with value failed");
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCallWithValue-address-bytes-uint256-}[`functionCallWithValue`], but
+     * with `errorMessage` as a fallback revert reason when `target` reverts.
+     *
+     * _Available since v3.1._
+     */
+    function functionCallWithValue(
+        address target,
+        bytes memory data,
+        uint256 value,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
+        require(address(this).balance >= value, "Address: insufficient balance for call");
+        (bool success, bytes memory returndata) = target.call{value: value}(data);
+        return verifyCallResultFromTarget(target, success, returndata, errorMessage);
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+     * but performing a static call.
+     *
+     * _Available since v3.3._
+     */
+    function functionStaticCall(address target, bytes memory data) internal view returns (bytes memory) {
+        return functionStaticCall(target, data, "Address: low-level static call failed");
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],
+     * but performing a static call.
+     *
+     * _Available since v3.3._
+     */
+    function functionStaticCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal view returns (bytes memory) {
+        (bool success, bytes memory returndata) = target.staticcall(data);
+        return verifyCallResultFromTarget(target, success, returndata, errorMessage);
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+     * but performing a delegate call.
+     *
+     * _Available since v3.4._
+     */
+    function functionDelegateCall(address target, bytes memory data) internal returns (bytes memory) {
+        return functionDelegateCall(target, data, "Address: low-level delegate call failed");
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],
+     * but performing a delegate call.
+     *
+     * _Available since v3.4._
+     */
+    function functionDelegateCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
+        (bool success, bytes memory returndata) = target.delegatecall(data);
+        return verifyCallResultFromTarget(target, success, returndata, errorMessage);
+    }
+
+    /**
+     * @dev Tool to verify that a low level call to smart-contract was successful, and revert (either by bubbling
+     * the revert reason or using the provided one) in case of unsuccessful call or if target was not a contract.
+     *
+     * _Available since v4.8._
+     */
+    function verifyCallResultFromTarget(
+        address target,
+        bool success,
+        bytes memory returndata,
+        string memory errorMessage
+    ) internal view returns (bytes memory) {
+        if (success) {
+            if (returndata.length == 0) {
+                // only check isContract if the call was successful and the return data is empty
+                // otherwise we already know that it was a contract
+                require(isContract(target), "Address: call to non-contract");
+            }
+            return returndata;
+        } else {
+            _revert(returndata, errorMessage);
+        }
+    }
+
+    /**
+     * @dev Tool to verify that a low level call was successful, and revert if it wasn't, either by bubbling the
+     * revert reason or using the provided one.
+     *
+     * _Available since v4.3._
+     */
+    function verifyCallResult(
+        bool success,
+        bytes memory returndata,
+        string memory errorMessage
+    ) internal pure returns (bytes memory) {
+        if (success) {
+            return returndata;
+        } else {
+            _revert(returndata, errorMessage);
+        }
+    }
+
+    function _revert(bytes memory returndata, string memory errorMessage) private pure {
+        // Look for revert reason and bubble it up if present
+        if (returndata.length > 0) {
+            // The easiest way to bubble the revert reason is using memory via assembly
+            /// @solidity memory-safe-assembly
+            assembly {
+                let returndata_size := mload(returndata)
+                revert(add(32, returndata), returndata_size)
+            }
+        } else {
+            revert(errorMessage);
+        }
+    }
+}
 
 // lib/eigenlayer-middleware/src/libraries/BN254.sol
 
@@ -604,9 +848,9 @@ library BitmapUtils {
     }
 }
 
-// lib/eigenlayer-middleware/lib/openzeppelin-contracts/contracts/utils/Context.sol
+// lib/openzeppelin-contracts/contracts/utils/Context.sol
 
-// OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
+// OpenZeppelin Contracts (last updated v4.9.4) (utils/Context.sol)
 
 /**
  * @dev Provides information about the current execution context, including the
@@ -625,6 +869,10 @@ abstract contract Context {
 
     function _msgData() internal view virtual returns (bytes calldata) {
         return msg.data;
+    }
+
+    function _contextSuffixLength() internal view virtual returns (uint256) {
+        return 0;
     }
 }
 
@@ -678,7 +926,7 @@ interface IERC165 {
     function supportsInterface(bytes4 interfaceID) external view returns (bool);
 }
 
-// lib/eigenlayer-middleware/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol
+// lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/IERC20.sol)
 
@@ -1006,7 +1254,7 @@ interface ISocketRegistry is ISocketRegistryErrors {
     ) external view returns (string memory);
 }
 
-// lib/eigenlayer-middleware/lib/openzeppelin-contracts/contracts/utils/math/Math.sol
+// lib/openzeppelin-contracts/contracts/utils/math/Math.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (utils/math/Math.sol)
 
@@ -1377,7 +1625,7 @@ library OperatorSetLib {
     }
 }
 
-// lib/eigenlayer-middleware/lib/openzeppelin-contracts-upgradeable/contracts/utils/math/SafeCastUpgradeable.sol
+// lib/openzeppelin-contracts-upgradeable/contracts/utils/math/SafeCastUpgradeable.sol
 
 // OpenZeppelin Contracts (last updated v4.8.0) (utils/math/SafeCast.sol)
 // This file was procedurally generated from scripts/generate/templates/SafeCast.js.
@@ -2622,7 +2870,8 @@ contract StateTracker {
      * @dev This slot is computed as keccak256("gasKiller.stateTracker") - 1
      *      It is used to store the number of state transitions that have occurred
      */
-    bytes32 internal constant _stateTrackerSlot = 0xdebfdfd5a50ad117c10898d68b5ccf0893c6b40d4f443f902e2e7646601bdeaf;
+    bytes32 internal constant STATE_TRACKER_STORAGE_LOCATION =
+        0xdebfdfd5a50ad117c10898d68b5ccf0893c6b40d4f443f902e2e7646601bdeaf;
 
     /**
      * @notice Modifier that increments the state transition counter
@@ -2637,8 +2886,8 @@ contract StateTracker {
      */
     modifier trackState() {
         assembly {
-            let count := sload(_stateTrackerSlot)
-            sstore(_stateTrackerSlot, add(0x01, count))
+            let count := sload(STATE_TRACKER_STORAGE_LOCATION)
+            sstore(STATE_TRACKER_STORAGE_LOCATION, add(0x01, count))
         }
         _;
     }
@@ -2650,7 +2899,7 @@ contract StateTracker {
      */
     function stateTransitionCount() public view returns (uint256 count) {
         assembly {
-            count := sload(_stateTrackerSlot)
+            count := sload(STATE_TRACKER_STORAGE_LOCATION)
         }
     }
 }
@@ -3008,7 +3257,171 @@ interface ISignatureUtilsMixin is ISignatureUtilsMixinErrors, ISignatureUtilsMix
     function domainSeparator() external view returns (bytes32);
 }
 
-// lib/eigenlayer-middleware/lib/openzeppelin-contracts/contracts/access/Ownable.sol
+// lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol
+
+// OpenZeppelin Contracts (last updated v4.9.0) (proxy/utils/Initializable.sol)
+
+/**
+ * @dev This is a base contract to aid in writing upgradeable contracts, or any kind of contract that will be deployed
+ * behind a proxy. Since proxied contracts do not make use of a constructor, it's common to move constructor logic to an
+ * external initializer function, usually called `initialize`. It then becomes necessary to protect this initializer
+ * function so it can only be called once. The {initializer} modifier provided by this contract will have this effect.
+ *
+ * The initialization functions use a version number. Once a version number is used, it is consumed and cannot be
+ * reused. This mechanism prevents re-execution of each "step" but allows the creation of new initialization steps in
+ * case an upgrade adds a module that needs to be initialized.
+ *
+ * For example:
+ *
+ * [.hljs-theme-light.nopadding]
+ * ```solidity
+ * contract MyToken is ERC20Upgradeable {
+ *     function initialize() initializer public {
+ *         __ERC20_init("MyToken", "MTK");
+ *     }
+ * }
+ *
+ * contract MyTokenV2 is MyToken, ERC20PermitUpgradeable {
+ *     function initializeV2() reinitializer(2) public {
+ *         __ERC20Permit_init("MyToken");
+ *     }
+ * }
+ * ```
+ *
+ * TIP: To avoid leaving the proxy in an uninitialized state, the initializer function should be called as early as
+ * possible by providing the encoded function call as the `_data` argument to {ERC1967Proxy-constructor}.
+ *
+ * CAUTION: When used with inheritance, manual care must be taken to not invoke a parent initializer twice, or to ensure
+ * that all initializers are idempotent. This is not verified automatically as constructors are by Solidity.
+ *
+ * [CAUTION]
+ * ====
+ * Avoid leaving a contract uninitialized.
+ *
+ * An uninitialized contract can be taken over by an attacker. This applies to both a proxy and its implementation
+ * contract, which may impact the proxy. To prevent the implementation contract from being used, you should invoke
+ * the {_disableInitializers} function in the constructor to automatically lock it when it is deployed:
+ *
+ * [.hljs-theme-light.nopadding]
+ * ```
+ * /// @custom:oz-upgrades-unsafe-allow constructor
+ * constructor() {
+ *     _disableInitializers();
+ * }
+ * ```
+ * ====
+ */
+abstract contract Initializable {
+    /**
+     * @dev Indicates that the contract has been initialized.
+     * @custom:oz-retyped-from bool
+     */
+    uint8 private _initialized;
+
+    /**
+     * @dev Indicates that the contract is in the process of being initialized.
+     */
+    bool private _initializing;
+
+    /**
+     * @dev Triggered when the contract has been initialized or reinitialized.
+     */
+    event Initialized(uint8 version);
+
+    /**
+     * @dev A modifier that defines a protected initializer function that can be invoked at most once. In its scope,
+     * `onlyInitializing` functions can be used to initialize parent contracts.
+     *
+     * Similar to `reinitializer(1)`, except that functions marked with `initializer` can be nested in the context of a
+     * constructor.
+     *
+     * Emits an {Initialized} event.
+     */
+    modifier initializer() {
+        bool isTopLevelCall = !_initializing;
+        require(
+            (isTopLevelCall && _initialized < 1) || (!AddressUpgradeable.isContract(address(this)) && _initialized == 1),
+            "Initializable: contract is already initialized"
+        );
+        _initialized = 1;
+        if (isTopLevelCall) {
+            _initializing = true;
+        }
+        _;
+        if (isTopLevelCall) {
+            _initializing = false;
+            emit Initialized(1);
+        }
+    }
+
+    /**
+     * @dev A modifier that defines a protected reinitializer function that can be invoked at most once, and only if the
+     * contract hasn't been initialized to a greater version before. In its scope, `onlyInitializing` functions can be
+     * used to initialize parent contracts.
+     *
+     * A reinitializer may be used after the original initialization step. This is essential to configure modules that
+     * are added through upgrades and that require initialization.
+     *
+     * When `version` is 1, this modifier is similar to `initializer`, except that functions marked with `reinitializer`
+     * cannot be nested. If one is invoked in the context of another, execution will revert.
+     *
+     * Note that versions can jump in increments greater than 1; this implies that if multiple reinitializers coexist in
+     * a contract, executing them in the right order is up to the developer or operator.
+     *
+     * WARNING: setting the version to 255 will prevent any future reinitialization.
+     *
+     * Emits an {Initialized} event.
+     */
+    modifier reinitializer(uint8 version) {
+        require(!_initializing && _initialized < version, "Initializable: contract is already initialized");
+        _initialized = version;
+        _initializing = true;
+        _;
+        _initializing = false;
+        emit Initialized(version);
+    }
+
+    /**
+     * @dev Modifier to protect an initialization function so that it can only be invoked by functions with the
+     * {initializer} and {reinitializer} modifiers, directly or indirectly.
+     */
+    modifier onlyInitializing() {
+        require(_initializing, "Initializable: contract is not initializing");
+        _;
+    }
+
+    /**
+     * @dev Locks the contract, preventing any future reinitialization. This cannot be part of an initializer call.
+     * Calling this in the constructor of a contract will prevent that contract from being initialized or reinitialized
+     * to any version. It is recommended to use this to lock implementation contracts that are designed to be called
+     * through proxies.
+     *
+     * Emits an {Initialized} event the first time it is successfully executed.
+     */
+    function _disableInitializers() internal virtual {
+        require(!_initializing, "Initializable: contract is initializing");
+        if (_initialized != type(uint8).max) {
+            _initialized = type(uint8).max;
+            emit Initialized(type(uint8).max);
+        }
+    }
+
+    /**
+     * @dev Returns the highest version that has been initialized. See {reinitializer}.
+     */
+    function _getInitializedVersion() internal view returns (uint8) {
+        return _initialized;
+    }
+
+    /**
+     * @dev Returns `true` if the contract is currently initializing. See {onlyInitializing}.
+     */
+    function _isInitializing() internal view returns (bool) {
+        return _initializing;
+    }
+}
+
+// lib/openzeppelin-contracts/contracts/access/Ownable.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (access/Ownable.sol)
 
@@ -5833,6 +6246,15 @@ abstract contract BLSSignatureCheckerStorage is IBLSSignatureChecker {
  * @dev This interface defines the core functionality that GasKillerSDK implementations must provide
  */
 interface IGasKillerSDK is IERC165 {
+    // Custom errors
+    error InvalidTransitionIndex();
+    error InvalidSignature();
+    error InvalidStorageUpdates();
+    error InvalidOperation();
+    error InsufficientQuorumThreshold();
+    error StaleBlockNumber();
+    error FutureBlockNumber();
+
     /**
      * @notice Function to verify if a signature is valid and contains correct storage updates
      * @param msgHash The hash of the message to verify
@@ -6101,46 +6523,36 @@ contract BLSSignatureChecker is BLSSignatureCheckerStorage {
     }
 }
 
-// src/GasKillerSDK.sol
+// src/upgradeable/GasKillerSDK.sol
 
 /**
  * @title GasKillerSDK
  * @notice Base SDK for implementing Gas Killer functionality in contracts
  * @dev Inherit from this contract to add Gas Killer capabilities to your contract
  */
-abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
-    // The BLS signature checker contract
-    BLSSignatureChecker public immutable blsSignatureChecker;
+abstract contract GasKillerSDK is StateTracker, Initializable, IGasKillerSDK {
+    /// @custom:storage-location erc7201:gaskiller.GasKillerSDK.storage
+    struct GasKillerSDKStorage {
+        bytes namespace; // Namespace for the contract
+        address avsAddress; // The AVS service manager address
+        BLSSignatureChecker blsSignatureChecker; // The BLS signature checker contract
+    }
 
-    // Namespace for the contract
-    bytes public namespace;
-
-    // The AVS service manager address
-    address public avsAddress;
+    // keccak256(abi.encode(uint256(keccak256("gaskiller.GasKillerSDK.storage")) - 1)) & ~bytes32(uint256(0xff));
+    bytes32 private constant GAS_KILLER_SDK_STORAGE_LOCATION =
+        0x321ebf629ed2e1e368f0890e8fdd95cf9a2ae5961b66a1805f0b2ec84e21d000;
 
     // Constants for stake threshold checking
     uint8 public constant THRESHOLD_DENOMINATOR = 100;
-    uint8 public QUORUM_THRESHOLD = 66; // 66% threshold for quorum verification
-    uint32 public BLOCK_STALE_MEASURE = 300;
+    uint8 public constant QUORUM_THRESHOLD = 66; // 66% quorum threshold
+    uint32 public constant BLOCK_STALE_MEASURE = 300;
 
-    // Custom errors
-    error InvalidTransitionIndex();
-    error InvalidSignature();
-    error InvalidStorageUpdates();
-    error InvalidOperation();
-    error InsufficientQuorumThreshold();
-    error StaleBlockNumber();
-    error FutureBlockNumber();
-
-    /**
-     * @notice Constructor
-     * @param _avsAddress The address of the AVS service manager
-     * @param _blsSignatureChecker The address of the BLS signature checker
-     */
-    constructor(address _avsAddress, address _blsSignatureChecker) {
-        blsSignatureChecker = BLSSignatureChecker(_blsSignatureChecker);
-        avsAddress = _avsAddress;
-        namespace = abi.encodePacked(avsAddress, "gaskiller");
+    /// @notice Initializes the contract
+    function initialize(address _avsAddress, address _blsSignatureChecker) public initializer {
+        GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
+        $.avsAddress = _avsAddress;
+        $.blsSignatureChecker = BLSSignatureChecker(_blsSignatureChecker);
+        $.namespace = abi.encodePacked($.avsAddress, "gaskiller");
     }
 
     /**
@@ -6162,6 +6574,8 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         bytes4 targetFunction,
         IBLSSignatureCheckerTypes.NonSignerStakesAndSignature calldata nonSignerStakesAndSignature
     ) external trackState {
+        GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
+
         // Check block number validity
         require(referenceBlockNumber < block.number, FutureBlockNumber());
         require((referenceBlockNumber + BLOCK_STALE_MEASURE) >= uint32(block.number), StaleBlockNumber());
@@ -6172,9 +6586,8 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         require(expectedHash == msgHash, InvalidSignature());
 
         // Verify the signatures using checkSignatures
-        (IBLSSignatureCheckerTypes.QuorumStakeTotals memory stakeTotals,) = blsSignatureChecker.checkSignatures(
-            msgHash, quorumNumbers, referenceBlockNumber, nonSignerStakesAndSignature
-        );
+        (IBLSSignatureCheckerTypes.QuorumStakeTotals memory stakeTotals,) = $.blsSignatureChecker
+            .checkSignatures(msgHash, quorumNumbers, referenceBlockNumber, nonSignerStakesAndSignature);
 
         // Check that signatories own at least 66% of each quorum
         for (uint256 i = 0; i < quorumNumbers.length; i++) {
@@ -6190,6 +6603,55 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     }
 
     /**
+     * @notice Query if a contract implements an interface
+     * @param interfaceId The interface identifier, as specified in ERC-165
+     * @return `true` if the contract implements `interfaceId` and `false` otherwise
+     * @dev This implementation supports ERC165 and IGasKillerSDK interface detection
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(IERC165).interfaceId || interfaceId == type(IGasKillerSDK).interfaceId;
+    }
+
+    /**
+     * @notice Function to get the expected hash for a given transition index, target function, and storage updates
+     * @param transitionIndex The transition index
+     * @param targetFunction The target function selector
+     * @param storageUpdates The storage updates
+     * @return bytes32 The expected hash
+     */
+    function getMessageHash(uint256 transitionIndex, bytes4 targetFunction, bytes calldata storageUpdates)
+        external
+        view
+        returns (bytes32)
+    {
+        return sha256(abi.encode(transitionIndex, address(this), targetFunction, storageUpdates));
+    }
+
+    /**
+     * @notice Function to get the AVS address
+     * @return address The AVS address
+     */
+    function getAvsAddress() external view returns (address) {
+        return _getGasKillerSDKStorage().avsAddress;
+    }
+
+    /**
+     * @notice Function to get the BLS signature checker address
+     * @return address The BLS signature checker address
+     */
+    function getBlsSignatureChecker() external view returns (address) {
+        return address(_getGasKillerSDKStorage().blsSignatureChecker);
+    }
+
+    /**
+     * @notice Function to get the namespace
+     * @return bytes The namespace
+     */
+    function getNamespace() external view returns (bytes memory) {
+        return _getGasKillerSDKStorage().namespace;
+    }
+
+    /**
      * @notice Function to apply storage updates
      * @param storageUpdates The storage updates to apply
      */
@@ -6199,12 +6661,23 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     }
 
     /**
-     * @notice Query if a contract implements an interface
-     * @param interfaceId The interface identifier, as specified in ERC-165
-     * @return `true` if the contract implements `interfaceId` and `false` otherwise
-     * @dev This implementation supports ERC165 and IGasKillerSDK interface detection
+     * @notice Internal function to set the AVS address
+     * @dev Namespace is used to identify the contract in the AVS service manager
+     * @param _avsAddress The new AVS address
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return interfaceId == type(IERC165).interfaceId || interfaceId == type(IGasKillerSDK).interfaceId;
+    function _setAvsAddress(address _avsAddress) internal {
+        GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
+        $.avsAddress = _avsAddress;
+        $.namespace = abi.encodePacked($.avsAddress, "gaskiller");
+    }
+
+    /**
+     * @notice Internal function to get the GasKillerSDK storage
+     * @return $ The GasKillerSDK storage struct
+     */
+    function _getGasKillerSDKStorage() private pure returns (GasKillerSDKStorage storage $) {
+        assembly {
+            $.slot := GAS_KILLER_SDK_STORAGE_LOCATION
+        }
     }
 }
