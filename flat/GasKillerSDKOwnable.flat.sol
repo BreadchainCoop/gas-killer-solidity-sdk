@@ -6827,16 +6827,16 @@ abstract contract GasKillerSDKOwnable is GasKillerSDK, OwnableUpgradeable {
         GasKillerSDK.initialize(_avsAddress, _blsSignatureChecker);
     }
 
-    /// @notice Disables initializers for the contract
-    function _disableInitializers() internal override(Initializable) {
-        super._disableInitializers();
-    }
-
     /**
      * @dev Example: Restricts setting AVS address to only owner.
      * If you want owner-only admin functions, you can add them like this:
      */
     function setAvsAddress(address newAvsAddress) external onlyOwner {
         _setAvsAddress(newAvsAddress);
+    }
+
+    /// @notice Disables initializers for the contract
+    function _disableInitializers() internal override(Initializable) {
+        super._disableInitializers();
     }
 }
