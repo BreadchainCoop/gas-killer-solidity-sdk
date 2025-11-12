@@ -6066,12 +6066,18 @@ abstract contract GasKillerSDK is StateTracker, Initializable, IGasKillerSDK {
     uint8 public constant QUORUM_THRESHOLD = 66; // 66% quorum threshold
     uint32 public constant BLOCK_STALE_MEASURE = 300;
 
-    /// @notice Initializes the contract
-    function initialize(address _avsAddress, address _blsSignatureChecker) public initializer {
-        GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
-        $.avsAddress = _avsAddress;
-        $.blsSignatureChecker = IBLSSignatureChecker(_blsSignatureChecker);
-        $.namespace = abi.encodePacked($.avsAddress, "gaskiller");
+    /**
+     * @notice Initializes the contract
+     * @param _avsAddress The address of the AVS service manager
+     * @param _blsSignatureChecker The address of the BLS signature checker
+     */
+    function __GasKillerSDK_init(address _avsAddress, address _blsSignatureChecker) internal onlyInitializing {
+        __GasKillerSDK_init_unchained(_avsAddress, _blsSignatureChecker);
+    }
+
+    function __GasKillerSDK_init_unchained(address _avsAddress, address _blsSignatureChecker) internal onlyInitializing {
+        _setAvsAddress(_avsAddress);
+        _setBlsSignatureChecker(_blsSignatureChecker);
     }
 
     /**
@@ -6190,6 +6196,11 @@ abstract contract GasKillerSDK is StateTracker, Initializable, IGasKillerSDK {
         $.namespace = abi.encodePacked($.avsAddress, "gaskiller");
     }
 
+    function _setBlsSignatureChecker(address _blsSignatureChecker) internal {
+        GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
+        $.blsSignatureChecker = IBLSSignatureChecker(_blsSignatureChecker);
+    }
+
     /**
      * @notice Internal function to get the GasKillerSDK storage
      * @return $ The GasKillerSDK storage struct
@@ -6208,25 +6219,40 @@ abstract contract GasKillerSDK is StateTracker, Initializable, IGasKillerSDK {
  * @notice Upgradeable GasKillerSDK with Ownable access control
  */
 abstract contract GasKillerSDKOwnable is GasKillerSDK, OwnableUpgradeable {
-    /// @notice Initializes the contract with AVS address and BLS Signature Checker, and sets the owner
-    /// @param _avsAddress The address of the AVS service manager
-    /// @param _blsSignatureChecker The address of the BLS signature checker
-    /// @param _owner The address to set as the contract owner
-    function initialize(address _avsAddress, address _blsSignatureChecker, address _owner) public virtual initializer {
-        __Ownable_init(_owner);
-        GasKillerSDK.initialize(_avsAddress, _blsSignatureChecker);
+    /**
+     * @notice Initializes the contract with AVS address and BLS Signature Checker, and sets the owner
+     * @param _avsAddress The address of the AVS service manager
+     * @param _blsSignatureChecker The address of the BLS signature checker
+     * @param _owner The address to set as the contract owner
+     */
+    function __GasKillerSDKOwnable_init(address _avsAddress, address _blsSignatureChecker, address _owner)
+        internal
+        onlyInitializing
+    {
+        __GasKillerSDKOwnable_init_unchained(_avsAddress, _blsSignatureChecker, _owner);
+    }
+
+    function __GasKillerSDKOwnable_init_unchained(address _avsAddress, address _blsSignatureChecker, address _owner)
+        internal
+        onlyInitializing
+    {
+        __Ownable_init_unchained(_owner);
+        GasKillerSDK.__GasKillerSDK_init_unchained(_avsAddress, _blsSignatureChecker);
     }
 
     /**
-     * @dev Example: Restricts setting AVS address to only owner.
-     * If you want owner-only admin functions, you can add them like this:
+     * @notice Disables initializers for the contract
+     */
+    function _disableInitializers() internal override(Initializable) {
+        super._disableInitializers();
+    }
+
+    /**
+     * @notice Allows the owner to set the AVS address
+     * @param newAvsAddress The new AVS address
+     * @dev Also updates the namespace for the contract
      */
     function setAvsAddress(address newAvsAddress) external onlyOwner {
         _setAvsAddress(newAvsAddress);
-    }
-
-    /// @notice Disables initializers for the contract
-    function _disableInitializers() internal override(Initializable) {
-        super._disableInitializers();
     }
 }
