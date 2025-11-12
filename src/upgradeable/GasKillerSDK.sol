@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import {Initializable} from "@openzeppelin-upgrades/contracts/proxy/utils/Initializable.sol";
 import {BN254} from "@eigenlayer-middleware/libraries/BN254.sol";
-import {BLSSignatureChecker} from "@eigenlayer-middleware/BLSSignatureChecker.sol";
 import {
     IBLSSignatureChecker,
     IBLSSignatureCheckerTypes
@@ -25,7 +24,7 @@ abstract contract GasKillerSDK is StateTracker, Initializable, IGasKillerSDK {
     struct GasKillerSDKStorage {
         bytes namespace; // Namespace for the contract
         address avsAddress; // The AVS service manager address
-        BLSSignatureChecker blsSignatureChecker; // The BLS signature checker contract
+        IBLSSignatureChecker blsSignatureChecker; // The BLS signature checker contract
     }
 
     // keccak256(abi.encode(uint256(keccak256("gaskiller.GasKillerSDK.storage")) - 1)) & ~bytes32(uint256(0xff));
@@ -41,7 +40,7 @@ abstract contract GasKillerSDK is StateTracker, Initializable, IGasKillerSDK {
     function initialize(address _avsAddress, address _blsSignatureChecker) public initializer {
         GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
         $.avsAddress = _avsAddress;
-        $.blsSignatureChecker = BLSSignatureChecker(_blsSignatureChecker);
+        $.blsSignatureChecker = IBLSSignatureChecker(_blsSignatureChecker);
         $.namespace = abi.encodePacked($.avsAddress, "gaskiller");
     }
 
