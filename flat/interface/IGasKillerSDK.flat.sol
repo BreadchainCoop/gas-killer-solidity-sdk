@@ -429,7 +429,7 @@ interface IERC165 {
     function supportsInterface(bytes4 interfaceID) external view returns (bool);
 }
 
-// lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol
+// lib/eigenlayer-middleware/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/IERC20.sol)
 
@@ -757,7 +757,7 @@ interface ISocketRegistry is ISocketRegistryErrors {
     ) external view returns (string memory);
 }
 
-// lib/openzeppelin-contracts/contracts/utils/math/Math.sol
+// lib/eigenlayer-middleware/lib/openzeppelin-contracts/contracts/utils/math/Math.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (utils/math/Math.sol)
 
@@ -1128,7 +1128,7 @@ library OperatorSetLib {
     }
 }
 
-// lib/openzeppelin-contracts-upgradeable/contracts/utils/math/SafeCastUpgradeable.sol
+// lib/eigenlayer-middleware/lib/openzeppelin-contracts-upgradeable/contracts/utils/math/SafeCastUpgradeable.sol
 
 // OpenZeppelin Contracts (last updated v4.8.0) (utils/math/SafeCast.sol)
 // This file was procedurally generated from scripts/generate/templates/SafeCast.js.
