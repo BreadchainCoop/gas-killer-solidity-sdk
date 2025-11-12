@@ -79,4 +79,3 @@ contract UpgradeableGasKillerSDKTest is Test {
         assertEq(v2.owner(), owner);
     }
 }
-
