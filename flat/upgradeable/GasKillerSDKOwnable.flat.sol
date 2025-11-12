@@ -6075,7 +6075,10 @@ abstract contract GasKillerSDK is StateTracker, Initializable, IGasKillerSDK {
         __GasKillerSDK_init_unchained(_avsAddress, _blsSignatureChecker);
     }
 
-    function __GasKillerSDK_init_unchained(address _avsAddress, address _blsSignatureChecker) internal onlyInitializing {
+    function __GasKillerSDK_init_unchained(address _avsAddress, address _blsSignatureChecker)
+        internal
+        onlyInitializing
+    {
         _setAvsAddress(_avsAddress);
         _setBlsSignatureChecker(_blsSignatureChecker);
     }
