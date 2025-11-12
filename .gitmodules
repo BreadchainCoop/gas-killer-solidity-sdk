@@ -5,3 +5,9 @@
 	path = lib/eigenlayer-middleware
 	url = https://github.com/BreadchainCoop/eigenlayer-middleware
 	branch = on-chain-check-signatures
+[submodule "lib/openzeppelin-contracts"]
+	path = lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts.git
+[submodule "lib/openzeppelin-contracts-upgradeable"]
+	path = lib/openzeppelin-contracts-upgradeable
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable

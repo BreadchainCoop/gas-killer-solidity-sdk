@@ -1,0 +1,17 @@
+{
+  "lib/eigenlayer-middleware": {
+    "rev": "f5adbcac55d9336cd646ce71bc467aa7e20f1a12"
+  },
+  "lib/forge-std": {
+    "rev": "b8f065fda83b8cd94a6b2fec8fcd911dc3b444fd"
+  },
+  "lib/openzeppelin-contracts": {
+    "rev": "6308fdc5e8e0d5e8a94dc9d5d4c79f6331334c81"
+  },
+  "lib/openzeppelin-contracts-upgradeable": {
+    "tag": {
+      "name": "v5.5.0",
+      "rev": "aa677e9d28ed78fc427ec47ba2baef2030c58e7c"
+    }
+  }
+}

@@ -10,6 +10,15 @@ import {IBLSSignatureCheckerTypes} from "@eigenlayer-middleware/interfaces/IBLSS
  * @dev This interface defines the core functionality that GasKillerSDK implementations must provide
  */
 interface IGasKillerSDK is IERC165 {
+    // Custom errors
+    error InvalidTransitionIndex();
+    error InvalidSignature();
+    error InvalidStorageUpdates();
+    error InvalidOperation();
+    error InsufficientQuorumThreshold();
+    error StaleBlockNumber();
+    error FutureBlockNumber();
+
     /**
      * @notice Function to verify if a signature is valid and contains correct storage updates
      * @param msgHash The hash of the message to verify

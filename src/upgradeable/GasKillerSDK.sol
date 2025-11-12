@@ -1,47 +1,48 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.0;
 
+import {Initializable} from "@openzeppelin-upgrades/contracts/proxy/utils/Initializable.sol";
+import {BN254} from "@eigenlayer-middleware/libraries/BN254.sol";
 import {BLSSignatureChecker} from "@eigenlayer-middleware/BLSSignatureChecker.sol";
 import {
     IBLSSignatureChecker,
     IBLSSignatureCheckerTypes
 } from "@eigenlayer-middleware/interfaces/IBLSSignatureChecker.sol";
 import {ISlashingRegistryCoordinator} from "@eigenlayer-middleware/interfaces/ISlashingRegistryCoordinator.sol";
-import {BN254} from "@eigenlayer-middleware/libraries/BN254.sol";
 import {IERC165} from "forge-std/interfaces/IERC165.sol";
 
-import {IGasKillerSDK} from "./interface/IGasKillerSDK.sol";
-import {StateTracker} from "./StateTracker.sol";
-import {StateChangeHandlerLib, StateUpdateType} from "./StateChangeHandlerLib.sol";
+import {IGasKillerSDK} from "../interface/IGasKillerSDK.sol";
+import {StateTracker} from "../StateTracker.sol";
+import {StateChangeHandlerLib, StateUpdateType} from "../StateChangeHandlerLib.sol";
 
 /**
  * @title GasKillerSDK
  * @notice Base SDK for implementing Gas Killer functionality in contracts
  * @dev Inherit from this contract to add Gas Killer capabilities to your contract
  */
-abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
-    // The BLS signature checker contract
-    BLSSignatureChecker public immutable blsSignatureChecker;
+abstract contract GasKillerSDK is StateTracker, Initializable, IGasKillerSDK {
+    /// @custom:storage-location erc7201:gaskiller.GasKillerSDK.storage
+    struct GasKillerSDKStorage {
+        bytes namespace; // Namespace for the contract
+        address avsAddress; // The AVS service manager address
+        BLSSignatureChecker blsSignatureChecker; // The BLS signature checker contract
+    }
 
-    // Namespace for the contract
-    bytes public namespace;
-
-    // The AVS service manager address
-    address public avsAddress;
+    // keccak256(abi.encode(uint256(keccak256("gaskiller.GasKillerSDK.storage")) - 1)) & ~bytes32(uint256(0xff));
+    bytes32 private constant GAS_KILLER_SDK_STORAGE_LOCATION =
+        0x321ebf629ed2e1e368f0890e8fdd95cf9a2ae5961b66a1805f0b2ec84e21d000;
 
     // Constants for stake threshold checking
     uint8 public constant THRESHOLD_DENOMINATOR = 100;
     uint8 public constant QUORUM_THRESHOLD = 66; // 66% quorum threshold
     uint32 public constant BLOCK_STALE_MEASURE = 300;
 
-    /**
-     * @notice Constructor
-     * @param _avsAddress The address of the AVS service manager
-     * @param _blsSignatureChecker The address of the BLS signature checker
-     */
-    constructor(address _avsAddress, address _blsSignatureChecker) {
-        _setAvsAddress(_avsAddress);
-        blsSignatureChecker = BLSSignatureChecker(_blsSignatureChecker);
+    /// @notice Initializes the contract
+    function initialize(address _avsAddress, address _blsSignatureChecker) public initializer {
+        GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
+        $.avsAddress = _avsAddress;
+        $.blsSignatureChecker = BLSSignatureChecker(_blsSignatureChecker);
+        $.namespace = abi.encodePacked($.avsAddress, "gaskiller");
     }
 
     /**
@@ -63,6 +64,8 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         bytes4 targetFunction,
         IBLSSignatureCheckerTypes.NonSignerStakesAndSignature calldata nonSignerStakesAndSignature
     ) external trackState {
+        GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
+
         // Check block number validity
         require(referenceBlockNumber < block.number, FutureBlockNumber());
         require((referenceBlockNumber + BLOCK_STALE_MEASURE) >= uint32(block.number), StaleBlockNumber());
@@ -73,9 +76,8 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         require(expectedHash == msgHash, InvalidSignature());
 
         // Verify the signatures using checkSignatures
-        (IBLSSignatureCheckerTypes.QuorumStakeTotals memory stakeTotals,) = blsSignatureChecker.checkSignatures(
-            msgHash, quorumNumbers, referenceBlockNumber, nonSignerStakesAndSignature
-        );
+        (IBLSSignatureCheckerTypes.QuorumStakeTotals memory stakeTotals,) = $.blsSignatureChecker
+            .checkSignatures(msgHash, quorumNumbers, referenceBlockNumber, nonSignerStakesAndSignature);
 
         // Check that signatories own at least 66% of each quorum
         for (uint256 i = 0; i < quorumNumbers.length; i++) {
@@ -116,6 +118,30 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     }
 
     /**
+     * @notice Function to get the AVS address
+     * @return address The AVS address
+     */
+    function getAvsAddress() external view returns (address) {
+        return _getGasKillerSDKStorage().avsAddress;
+    }
+
+    /**
+     * @notice Function to get the BLS signature checker address
+     * @return address The BLS signature checker address
+     */
+    function getBlsSignatureChecker() external view returns (address) {
+        return address(_getGasKillerSDKStorage().blsSignatureChecker);
+    }
+
+    /**
+     * @notice Function to get the namespace
+     * @return bytes The namespace
+     */
+    function getNamespace() external view returns (bytes memory) {
+        return _getGasKillerSDKStorage().namespace;
+    }
+
+    /**
      * @notice Function to apply storage updates
      * @param storageUpdates The storage updates to apply
      */
@@ -130,7 +156,18 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
      * @param _avsAddress The new AVS address
      */
     function _setAvsAddress(address _avsAddress) internal {
-        avsAddress = _avsAddress;
-        namespace = abi.encodePacked(avsAddress, "gaskiller");
+        GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
+        $.avsAddress = _avsAddress;
+        $.namespace = abi.encodePacked($.avsAddress, "gaskiller");
+    }
+
+    /**
+     * @notice Internal function to get the GasKillerSDK storage
+     * @return $ The GasKillerSDK storage struct
+     */
+    function _getGasKillerSDKStorage() private pure returns (GasKillerSDKStorage storage $) {
+        assembly {
+            $.slot := GAS_KILLER_SDK_STORAGE_LOCATION
+        }
     }
 }
