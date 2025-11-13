@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity >=0.5.0 >=0.6.2 ^0.8.0 ^0.8.1 ^0.8.2 ^0.8.20 ^0.8.27;
+pragma solidity >=0.5.0 >=0.6.2 ^0.8.0 ^0.8.1 ^0.8.2 ^0.8.27;
 
-// lib/eigenlayer-middleware/lib/openzeppelin-contracts/contracts/utils/Address.sol
+// lib/openzeppelin-contracts-upgradeable/contracts/utils/AddressUpgradeable.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (utils/Address.sol)
 
 /**
  * @dev Collection of functions related to the address type
  */
-library Address {
+library AddressUpgradeable {
     /**
      * @dev Returns true if `account` is a contract.
      *
@@ -673,7 +673,7 @@ interface IERC165 {
     function supportsInterface(bytes4 interfaceID) external view returns (bool);
 }
 
-// lib/eigenlayer-middleware/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol
+// lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/IERC20.sol)
 
@@ -1001,7 +1001,7 @@ interface ISocketRegistry is ISocketRegistryErrors {
     ) external view returns (string memory);
 }
 
-// lib/eigenlayer-middleware/lib/openzeppelin-contracts/contracts/utils/math/Math.sol
+// lib/openzeppelin-contracts/contracts/utils/math/Math.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (utils/math/Math.sol)
 
@@ -3006,7 +3006,7 @@ interface ISignatureUtilsMixin is ISignatureUtilsMixinErrors, ISignatureUtilsMix
     function domainSeparator() external view returns (bytes32);
 }
 
-// lib/eigenlayer-middleware/lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol
+// lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (proxy/utils/Initializable.sol)
 
@@ -3089,7 +3089,7 @@ abstract contract Initializable {
     modifier initializer() {
         bool isTopLevelCall = !_initializing;
         require(
-            (isTopLevelCall && _initialized < 1) || (!Address.isContract(address(this)) && _initialized == 1),
+            (isTopLevelCall && _initialized < 1) || (!AddressUpgradeable.isContract(address(this)) && _initialized == 1),
             "Initializable: contract is already initialized"
         );
         _initialized = 1;
@@ -3169,8 +3169,6 @@ abstract contract Initializable {
         return _initializing;
     }
 }
-
-// lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol
 
 // lib/eigenlayer-middleware/lib/eigenlayer-contracts/src/contracts/libraries/SlashingLib.sol
 
