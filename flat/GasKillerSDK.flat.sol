@@ -5508,16 +5508,6 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     uint32 public constant BLOCK_STALE_MEASURE = 300;
 
     /**
-     * @notice Constructor
-     * @param _avsAddress The address of the AVS service manager
-     * @param _blsSignatureChecker The address of the BLS signature checker
-     */
-    constructor(address _avsAddress, address _blsSignatureChecker) {
-        _setAvsAddress(_avsAddress);
-        _setBlsSignatureChecker(_blsSignatureChecker);
-    }
-
-    /**
      * @notice Function to verify if a signature is valid and contains correct storage updates
      * @param msgHash The hash of the message to verify
      * @param quorumNumbers The quorum numbers to check signatures for
