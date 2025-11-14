@@ -10,13 +10,14 @@ import {IERC165} from "forge-std/interfaces/IERC165.sol";
 import {IGasKillerSDK} from "./interface/IGasKillerSDK.sol";
 import {StateTracker} from "./StateTracker.sol";
 import {StateChangeHandlerLib, StateUpdateType} from "./StateChangeHandlerLib.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @title GasKillerSDK
  * @notice Base SDK for implementing Gas Killer functionality in contracts
  * @dev Inherit from this contract to add Gas Killer capabilities to your contract
  */
-abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
+abstract contract GasKillerSDK is Initializable, StateTracker, IGasKillerSDK {
     /// @custom:storage-location erc7201:gaskiller.GasKillerSDK.storage
     struct GasKillerSDKStorage {
         bytes namespace; // Namespace for the contract
@@ -32,6 +33,11 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     uint8 public constant THRESHOLD_DENOMINATOR = 100;
     uint8 public constant QUORUM_THRESHOLD = 66; // 66% quorum threshold
     uint32 public constant BLOCK_STALE_MEASURE = 300;
+
+    function __GasKillerSDK_init(address _avsAddress, address _blsSignatureChecker) internal onlyInitializing {
+        _setAvsAddress(_avsAddress);
+        _setBlsSignatureChecker(_blsSignatureChecker);
+    }
 
     /**
      * @notice Function to verify if a signature is valid and contains correct storage updates
