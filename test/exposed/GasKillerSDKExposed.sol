@@ -11,13 +11,4 @@ contract GasKillerSDKExposed is GasKillerSDK {
     function stateChangeHandlerExternal(bytes calldata storageUpdates) external {
         super._stateChangeHandler(storageUpdates);
     }
-
-    // Expose internal setters for testing edge cases
-    function setAvsAddressExternal(address _avsAddress) external {
-        _setAvsAddress(_avsAddress);
-    }
-
-    function setBlsSignatureCheckerExternal(address _blsSignatureChecker) external {
-        _setBlsSignatureChecker(_blsSignatureChecker);
-    }
 }
