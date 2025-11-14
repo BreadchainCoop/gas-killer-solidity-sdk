@@ -10,7 +10,7 @@ import {IERC165} from "forge-std/interfaces/IERC165.sol";
 import {IGasKillerSDK} from "./interface/IGasKillerSDK.sol";
 import {StateTracker} from "./StateTracker.sol";
 import {StateChangeHandlerLib, StateUpdateType} from "./StateChangeHandlerLib.sol";
-import {Initializable} from "@openzeppelin-upgradeable-v5.5/contracts/proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin-v5.5/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @title GasKillerSDK
