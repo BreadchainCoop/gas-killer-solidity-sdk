@@ -34,11 +34,6 @@ abstract contract GasKillerSDK is Initializable, StateTracker, IGasKillerSDK {
     uint8 public constant QUORUM_THRESHOLD = 66; // 66% quorum threshold
     uint32 public constant BLOCK_STALE_MEASURE = 300;
 
-    constructor() {
-        _disableInitializers();
-    }
-
-
     function __GasKillerSDK_init(address _avsAddress, address _blsSignatureChecker) internal onlyInitializing {
         _setAvsAddress(_avsAddress);
         _setBlsSignatureChecker(_blsSignatureChecker);
