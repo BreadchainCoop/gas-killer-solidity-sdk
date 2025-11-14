@@ -11,9 +11,15 @@ import {StateChangeHandlerLib} from "../src/StateChangeHandlerLib.sol";
 
 contract GasKillerSDKTest is Test {
     GasKillerSDKExposed public sdk;
+    address public avsAddress;
+    address public blsSignatureChecker;
 
     function setUp() public {
-        sdk = new GasKillerSDKExposed(makeAddr("AVS"), makeAddr("BLS_SIG_CHECKER"));
+        avsAddress = makeAddr("AVS");
+        blsSignatureChecker = makeAddr("BLS_SIG_CHECKER");
+
+        sdk = new GasKillerSDKExposed();
+        sdk.initialize(avsAddress, blsSignatureChecker);
     }
 
     function test_stateChangeHandlerExternal_Store() public {
@@ -105,6 +111,39 @@ contract GasKillerSDKTest is Test {
 
         // Test that the contract does not support 0xffffffff (invalid interface ID)
         assertFalse(sdk.supportsInterface(0xffffffff));
+    }
+}
+
+contract GasKillerSDKInitializationTest is Test {
+    GasKillerSDKExposed public sdk;
+    address public avsAddress;
+    address public blsSignatureChecker;
+
+    function setUp() public {
+        avsAddress = makeAddr("AVS");
+        blsSignatureChecker = makeAddr("BLS_SIG_CHECKER");
+    }
+
+    function test_initialization_setsAddressesCorrectly() public {
+        sdk = new GasKillerSDKExposed();
+        sdk.initialize(avsAddress, blsSignatureChecker);
+
+        // Verify addresses are set correctly
+        assertEq(sdk.avsAddress(), avsAddress);
+        assertEq(sdk.blsSignatureChecker(), blsSignatureChecker);
+
+        // Verify namespace is set correctly (should be avsAddress + "gaskiller")
+        bytes memory expectedNamespace = abi.encodePacked(avsAddress, "gaskiller");
+        assertEq(sdk.namespace(), expectedNamespace);
+    }
+
+    function test_initialization_uninitializedContractHasZeroValues() public {
+        sdk = new GasKillerSDKExposed();
+
+        // Before initialization, addresses should be zero
+        assertEq(sdk.avsAddress(), address(0));
+        assertEq(sdk.blsSignatureChecker(), address(0));
+        assertEq(sdk.namespace().length, 0);
     }
 }
 
