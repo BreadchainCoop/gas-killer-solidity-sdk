@@ -7,7 +7,7 @@ import {
 } from "@eigenlayer-middleware/interfaces/IBLSSignatureChecker.sol";
 import {IERC165} from "forge-std/interfaces/IERC165.sol";
 
-import {IGasKillerSDK, ExternalStorageSlot} from "./interface/IGasKillerSDK.sol";
+import {IGasKillerSDK, ExternalCall} from "./interface/IGasKillerSDK.sol";
 import {StateTracker} from "./StateTracker.sol";
 import {StateChangeHandlerLib, StateUpdateType} from "./StateChangeHandlerLib.sol";
 
@@ -51,13 +51,13 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     /**
      * @notice Function to verify if a signature is valid and contains correct storage updates
      * @dev The message hash must be computed as:
-     *      sha256(abi.encode(transitionIndex, address(this), anchorHash, callerAddress, contractCalldata, storageUpdates, expectedExternalSlots))
+     *      sha256(abi.encode(transitionIndex, address(this), anchorHash, callerAddress, contractCalldata, storageUpdates, expectedExternalCalls))
      *      This format enables slashing by including all inputs needed to reproduce execution.
      * @param msgHash The hash of the message to verify
      * @param quorumNumbers The quorum numbers to check signatures for
      * @param referenceBlockNumber The block number to use as reference for operator set
      * @param storageUpdates The storage updates to verify
-     * @param expectedExternalSlots Array of external storage slots that were read during execution (as proven in ZK proof)
+     * @param expectedExternalCalls Array of first-level external calls made during execution (as proven in ZK proof)
      * @param transitionIndex The transition index
      * @param anchorHash The block hash anchoring the execution to a specific Ethereum state
      * @param callerAddress The address that initiated the original call (msg.sender)
@@ -69,7 +69,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         bytes calldata quorumNumbers,
         uint32 referenceBlockNumber,
         bytes calldata storageUpdates,
-        ExternalStorageSlot[] calldata expectedExternalSlots,
+        ExternalCall[] calldata expectedExternalCalls,
         uint256 transitionIndex,
         bytes32 anchorHash,
         address callerAddress,
@@ -92,7 +92,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         // - callerAddress: msg.sender (affects execution via access control, balances)
         // - contractCalldata: full calldata with arguments (enables execution reproduction)
         // - storageUpdates: the claimed storage changes
-        // - expectedExternalSlots: external storage slots that were read during execution
+        // - expectedExternalCalls: first-level external calls made during execution
         bytes32 expectedHash = sha256(abi.encode(
             transitionIndex,
             address(this),
@@ -100,7 +100,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
             callerAddress,
             contractCalldata,
             storageUpdates,
-            expectedExternalSlots
+            expectedExternalCalls
         ));
         require(expectedHash == msgHash, InvalidSignature());
 
@@ -117,8 +117,8 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
             );
         }
 
-        // Apply the state changes, verifying external storage accesses match expected
-        _stateChangeHandler(storageUpdates, expectedExternalSlots);
+        // Apply the state changes, verifying external call results match expected
+        _stateChangeHandler(storageUpdates, expectedExternalCalls);
     }
 
     /**
@@ -139,7 +139,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
      * @param callerAddress The caller address (msg.sender)
      * @param contractCalldata The full contract calldata
      * @param storageUpdates The storage updates
-     * @param expectedExternalSlots The expected external storage slots that were read
+     * @param expectedExternalCalls The expected first-level external calls made during execution
      * @return bytes32 The expected message hash
      */
     function getMessageHash(
@@ -148,7 +148,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         address callerAddress,
         bytes calldata contractCalldata,
         bytes calldata storageUpdates,
-        ExternalStorageSlot[] calldata expectedExternalSlots
+        ExternalCall[] calldata expectedExternalCalls
     ) external view returns (bytes32) {
         return sha256(abi.encode(
             transitionIndex,
@@ -157,7 +157,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
             callerAddress,
             contractCalldata,
             storageUpdates,
-            expectedExternalSlots
+            expectedExternalCalls
         ));
     }
 
@@ -186,13 +186,13 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     }
 
     /**
-     * @notice Function to apply storage updates with external slot verification
+     * @notice Function to apply storage updates with external call verification
      * @param storageUpdates The storage updates to apply
-     * @param expectedExternalSlots The expected external storage slots that were read during execution
+     * @param expectedExternalCalls The expected first-level external calls made during execution
      */
-    function _stateChangeHandler(bytes calldata storageUpdates, ExternalStorageSlot[] calldata expectedExternalSlots) internal {
+    function _stateChangeHandler(bytes calldata storageUpdates, ExternalCall[] calldata expectedExternalCalls) internal {
         (StateUpdateType[] memory types, bytes[] memory args) = abi.decode(storageUpdates, (StateUpdateType[], bytes[]));
-        StateChangeHandlerLib._runStateUpdates(types, args, expectedExternalSlots);
+        StateChangeHandlerLib._runStateUpdates(types, args, expectedExternalCalls);
     }
 
     /**

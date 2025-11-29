@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.0;
 
-import {ExternalStorageSlot} from "./interface/IGasKillerSDK.sol";
+import {ExternalCall} from "./interface/IGasKillerSDK.sol";
 
 enum StateUpdateType {
     STORE,
@@ -14,45 +14,38 @@ enum StateUpdateType {
 }
 
 library StateChangeHandlerLib {
-    /// @notice Decodes and executes a series of state updates with external storage slot verification
+    /// @notice Decodes and executes a series of state updates with external call verification
     /// @dev This function processes an array of state updates, executing them in sequence. Each update can be one of:
     ///      - STORE: Direct storage writes using assembly
     ///      - CALL: External contract calls with value transfer
     ///      - LOG0-LOG4: Event emission with 0-4 indexed topics
-    ///      Before executing any state updates, all external storage slots are verified by performing SLOAD
-    ///      and comparing against the expected values from the ZK proof.
+    ///      Before executing any state updates, all first-level external calls are replayed and verified
+    ///      to ensure they return the same results as during the ZK proof execution.
     /// @param types Array of StateUpdateType enums indicating the type of each state update operation
     /// @param args Array of ABI-encoded arguments corresponding to each operation type
-    /// @param expectedExternalSlots Array of external storage slots with expected values (as proven in ZK proof)
+    /// @param expectedExternalCalls Array of first-level external calls with expected results (as proven in ZK proof)
     /// @dev types and args arrays must be equal length, with args[i] containing the encoded parameters for types[i]
     function _runStateUpdates(
         StateUpdateType[] memory types,
         bytes[] memory args,
-        ExternalStorageSlot[] calldata expectedExternalSlots
+        ExternalCall[] calldata expectedExternalCalls
     ) internal {
         require(types.length == args.length, InvalidArguments());
 
-        // Verify all external storage slots have the expected values before executing state updates
-        // External slots are always for contracts other than address(this)
-        for (uint256 i = 0; i < expectedExternalSlots.length; i++) {
-            ExternalStorageSlot calldata expectedSlot = expectedExternalSlots[i];
-            address target = expectedSlot.contractAddress;
-            bytes32 slot = expectedSlot.slot;
+        // Verify all first-level external calls return the expected results before executing state updates
+        for (uint256 i = 0; i < expectedExternalCalls.length; i++) {
+            ExternalCall calldata externalCall = expectedExternalCalls[i];
 
-            // Read storage from external contract via getStorageAt(bytes32)
-            (bool success, bytes memory result) = target.staticcall(
-                abi.encodeWithSignature("getStorageAt(bytes32)", slot)
-            );
+            (bool success, bytes memory actualResult) = externalCall.target.staticcall(externalCall.callData);
 
-            if (!success || result.length < 32) {
-                revert ExternalStorageSlotMismatch(target, slot, expectedSlot.value, bytes32(0));
+            if (!success) {
+                revert ExternalCallResultMismatch(externalCall.target, externalCall.callData, externalCall.expectedResult, actualResult);
             }
 
-            bytes32 actualValue = abi.decode(result, (bytes32));
-            require(
-                actualValue == expectedSlot.value,
-                ExternalStorageSlotMismatch(target, slot, expectedSlot.value, actualValue)
-            );
+            // Compare the full return data
+            if (keccak256(actualResult) != keccak256(externalCall.expectedResult)) {
+                revert ExternalCallResultMismatch(externalCall.target, externalCall.callData, externalCall.expectedResult, actualResult);
+            }
         }
 
         for (uint256 i = 0; i < types.length; i++) {
@@ -123,5 +116,5 @@ library StateChangeHandlerLib {
 
     error InvalidArguments();
     error RevertingContext(uint256 index, address target, bytes revertData, bytes callargs);
-    error ExternalStorageSlotMismatch(address contractAddress, bytes32 slot, bytes32 expectedValue, bytes32 actualValue);
+    error ExternalCallResultMismatch(address target, bytes callData, bytes expectedResult, bytes actualResult);
 }
