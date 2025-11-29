@@ -5304,6 +5304,14 @@ interface IBLSSignatureChecker is IBLSSignatureCheckerErrors, IBLSSignatureCheck
 
 // src/interface/IGasKillerSDK.sol
 
+/// @notice Represents a first-level external call made during contract execution
+/// @dev Captures the target, calldata, and expected result for verification at runtime
+struct ExternalCall {
+    address target;         // The contract being called
+    bytes callData;         // The calldata sent to the target
+    bytes expectedResult;   // The expected return data from the call
+}
+
 /**
  * @title IGasKillerSDK
  * @notice Interface for GasKillerSDK contracts
@@ -5318,6 +5326,7 @@ interface IGasKillerSDK is IERC165 {
     error InsufficientQuorumThreshold();
     error StaleBlockNumber();
     error FutureBlockNumber();
+    error ExternalCallResultMismatch(address target, bytes callData, bytes expectedResult, bytes actualResult);
 
     /**
      * @notice Function to verify if a signature is valid and contains correct storage updates
@@ -5325,6 +5334,7 @@ interface IGasKillerSDK is IERC165 {
      * @param quorumNumbers The quorum numbers to check signatures for
      * @param referenceBlockNumber The block number to use as reference for operator set
      * @param storageUpdates The storage updates to verify
+     * @param expectedExternalCalls Array of first-level external calls made during execution (as proven in ZK proof)
      * @param transitionIndex The transition index
      * @param anchorHash The block hash anchoring the execution to a specific Ethereum state
      * @param callerAddress The address that initiated the original call (msg.sender)
@@ -5336,6 +5346,7 @@ interface IGasKillerSDK is IERC165 {
         bytes calldata quorumNumbers,
         uint32 referenceBlockNumber,
         bytes calldata storageUpdates,
+        ExternalCall[] calldata expectedExternalCalls,
         uint256 transitionIndex,
         bytes32 anchorHash,
         address callerAddress,

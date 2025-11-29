@@ -2264,94 +2264,6 @@ library SafeCastUpgradeable {
     }
 }
 
-// src/StateChangeHandlerLib.sol
-
-enum StateUpdateType {
-    STORE,
-    CALL,
-    LOG0,
-    LOG1,
-    LOG2,
-    LOG3,
-    LOG4
-}
-
-library StateChangeHandlerLib {
-    /// @notice Decodes and executes a series of state updates
-    /// @dev This function processes an array of state updates, executing them in sequence. Each update can be one of:
-    ///      - STORE: Direct storage writes using assembly
-    ///      - CALL: External contract calls with value transfer
-    ///      - LOG0-LOG4: Event emission with 0-4 indexed topics
-    /// @param types Array of StateUpdateType enums indicating the type of each state update operation
-    /// @param args Array of ABI-encoded arguments corresponding to each operation type
-    /// @dev types and args arrays must be equal length, with args[i] containing the encoded parameters for types[i]
-    function _runStateUpdates(StateUpdateType[] memory types, bytes[] memory args) internal {
-        require(types.length == args.length, InvalidArguments());
-        for (uint256 i = 0; i < types.length; i++) {
-            StateUpdateType stateUpdateType = types[i];
-            bytes memory arg = args[i];
-
-            if (stateUpdateType == StateUpdateType.STORE) {
-                (bytes32 slot, bytes32 value) = abi.decode(arg, (bytes32, bytes32));
-                assembly {
-                    sstore(slot, value)
-                }
-            } else if (stateUpdateType == StateUpdateType.CALL) {
-                (address target, uint256 value, bytes memory callargs) = abi.decode(arg, (address, uint256, bytes));
-                bool success;
-                // TOOD: might need better gas handling
-                uint256 callgas = gasleft();
-                assembly {
-                    success := call(callgas, target, value, add(callargs, 0x20), mload(callargs), 0, 0)
-                }
-                // TODO: this section needs heavy testing
-                if (!success) {
-                    uint256 _returndatasize;
-                    assembly {
-                        _returndatasize := returndatasize()
-                    }
-                    bytes memory revertData = new bytes(_returndatasize);
-                    assembly {
-                        returndatacopy(add(revertData, 0x20), 0, _returndatasize)
-                    }
-                    revert RevertingContext(i, target, revertData, callargs);
-                }
-            } else if (stateUpdateType == StateUpdateType.LOG0) {
-                // NOTE: For consistency I decode an abi encoding of bytes from bytes, but technically it's redundant
-                (bytes memory data) = abi.decode(arg, (bytes));
-                assembly {
-                    log0(add(data, 0x20), mload(data))
-                }
-            } else if (stateUpdateType == StateUpdateType.LOG1) {
-                (bytes memory data, bytes32 topic1) = abi.decode(arg, (bytes, bytes32));
-                assembly {
-                    log1(add(data, 0x20), mload(data), topic1)
-                }
-            } else if (stateUpdateType == StateUpdateType.LOG2) {
-                (bytes memory data, bytes32 topic1, bytes32 topic2) = abi.decode(arg, (bytes, bytes32, bytes32));
-                assembly {
-                    log2(add(data, 0x20), mload(data), topic1, topic2)
-                }
-            } else if (stateUpdateType == StateUpdateType.LOG3) {
-                (bytes memory data, bytes32 topic1, bytes32 topic2, bytes32 topic3) =
-                    abi.decode(arg, (bytes, bytes32, bytes32, bytes32));
-                assembly {
-                    log3(add(data, 0x20), mload(data), topic1, topic2, topic3)
-                }
-            } else if (stateUpdateType == StateUpdateType.LOG4) {
-                (bytes memory data, bytes32 topic1, bytes32 topic2, bytes32 topic3, bytes32 topic4) =
-                    abi.decode(arg, (bytes, bytes32, bytes32, bytes32, bytes32));
-                assembly {
-                    log4(add(data, 0x20), mload(data), topic1, topic2, topic3, topic4)
-                }
-            }
-        }
-    }
-
-    error InvalidArguments();
-    error RevertingContext(uint256 index, address target, bytes revertData, bytes callargs);
-}
-
 // src/StateTracker.sol
 
 /**
@@ -5447,6 +5359,14 @@ interface IBLSSignatureChecker is IBLSSignatureCheckerErrors, IBLSSignatureCheck
 
 // src/interface/IGasKillerSDK.sol
 
+/// @notice Represents a first-level external call made during contract execution
+/// @dev Captures the target, calldata, and expected result for verification at runtime
+struct ExternalCall {
+    address target;         // The contract being called
+    bytes callData;         // The calldata sent to the target
+    bytes expectedResult;   // The expected return data from the call
+}
+
 /**
  * @title IGasKillerSDK
  * @notice Interface for GasKillerSDK contracts
@@ -5461,6 +5381,7 @@ interface IGasKillerSDK is IERC165 {
     error InsufficientQuorumThreshold();
     error StaleBlockNumber();
     error FutureBlockNumber();
+    error ExternalCallResultMismatch(address target, bytes callData, bytes expectedResult, bytes actualResult);
 
     /**
      * @notice Function to verify if a signature is valid and contains correct storage updates
@@ -5468,6 +5389,7 @@ interface IGasKillerSDK is IERC165 {
      * @param quorumNumbers The quorum numbers to check signatures for
      * @param referenceBlockNumber The block number to use as reference for operator set
      * @param storageUpdates The storage updates to verify
+     * @param expectedExternalCalls Array of first-level external calls made during execution (as proven in ZK proof)
      * @param transitionIndex The transition index
      * @param anchorHash The block hash anchoring the execution to a specific Ethereum state
      * @param callerAddress The address that initiated the original call (msg.sender)
@@ -5479,12 +5401,131 @@ interface IGasKillerSDK is IERC165 {
         bytes calldata quorumNumbers,
         uint32 referenceBlockNumber,
         bytes calldata storageUpdates,
+        ExternalCall[] calldata expectedExternalCalls,
         uint256 transitionIndex,
         bytes32 anchorHash,
         address callerAddress,
         bytes calldata contractCalldata,
         IBLSSignatureCheckerTypes.NonSignerStakesAndSignature calldata nonSignerStakesAndSignature
     ) external;
+}
+
+// src/StateChangeHandlerLib.sol
+
+enum StateUpdateType {
+    STORE,
+    CALL,
+    LOG0,
+    LOG1,
+    LOG2,
+    LOG3,
+    LOG4
+}
+
+library StateChangeHandlerLib {
+    /// @notice Decodes and executes a series of state updates with external call verification
+    /// @dev This function processes an array of state updates, executing them in sequence. Each update can be one of:
+    ///      - STORE: Direct storage writes using assembly
+    ///      - CALL: External contract calls with value transfer
+    ///      - LOG0-LOG4: Event emission with 0-4 indexed topics
+    ///      Before executing any state updates, all first-level external calls are replayed and verified
+    ///      to ensure they return the same results as during the ZK proof execution.
+    /// @param types Array of StateUpdateType enums indicating the type of each state update operation
+    /// @param args Array of ABI-encoded arguments corresponding to each operation type
+    /// @param expectedExternalCalls Array of first-level external calls with expected results (as proven in ZK proof)
+    /// @dev types and args arrays must be equal length, with args[i] containing the encoded parameters for types[i]
+    function _runStateUpdates(
+        StateUpdateType[] memory types,
+        bytes[] memory args,
+        ExternalCall[] calldata expectedExternalCalls
+    ) internal {
+        require(types.length == args.length, InvalidArguments());
+
+        // Verify all first-level external calls return the expected results before executing state updates
+        for (uint256 i = 0; i < expectedExternalCalls.length; i++) {
+            ExternalCall calldata externalCall = expectedExternalCalls[i];
+
+            (bool success, bytes memory actualResult) = externalCall.target.staticcall(externalCall.callData);
+
+            if (!success) {
+                revert ExternalCallResultMismatch(externalCall.target, externalCall.callData, externalCall.expectedResult, actualResult);
+            }
+
+            // Compare the full return data
+            if (keccak256(actualResult) != keccak256(externalCall.expectedResult)) {
+                revert ExternalCallResultMismatch(externalCall.target, externalCall.callData, externalCall.expectedResult, actualResult);
+            }
+        }
+
+        for (uint256 i = 0; i < types.length; i++) {
+            StateUpdateType stateUpdateType = types[i];
+            bytes memory arg = args[i];
+
+            if (stateUpdateType == StateUpdateType.STORE) {
+                (bytes32 slot, bytes32 value) = abi.decode(arg, (bytes32, bytes32));
+                assembly {
+                    sstore(slot, value)
+                }
+            } else if (stateUpdateType == StateUpdateType.CALL) {
+                (
+                    address target,
+                    uint256 value,
+                    bytes memory callargs
+                ) = abi.decode(arg, (address, uint256, bytes));
+
+                bool success;
+                // TOOD: might need better gas handling
+                uint256 callgas = gasleft();
+                assembly {
+                    success := call(callgas, target, value, add(callargs, 0x20), mload(callargs), 0, 0)
+                }
+                // TODO: this section needs heavy testing
+                if (!success) {
+                    uint256 _returndatasize;
+                    assembly {
+                        _returndatasize := returndatasize()
+                    }
+                    bytes memory revertData = new bytes(_returndatasize);
+                    assembly {
+                        returndatacopy(add(revertData, 0x20), 0, _returndatasize)
+                    }
+                    revert RevertingContext(i, target, revertData, callargs);
+                }
+            } else if (stateUpdateType == StateUpdateType.LOG0) {
+                // NOTE: For consistency I decode an abi encoding of bytes from bytes, but technically it's redundant
+                (bytes memory data) = abi.decode(arg, (bytes));
+                assembly {
+                    log0(add(data, 0x20), mload(data))
+                }
+            } else if (stateUpdateType == StateUpdateType.LOG1) {
+                (bytes memory data, bytes32 topic1) = abi.decode(arg, (bytes, bytes32));
+                assembly {
+                    log1(add(data, 0x20), mload(data), topic1)
+                }
+            } else if (stateUpdateType == StateUpdateType.LOG2) {
+                (bytes memory data, bytes32 topic1, bytes32 topic2) = abi.decode(arg, (bytes, bytes32, bytes32));
+                assembly {
+                    log2(add(data, 0x20), mload(data), topic1, topic2)
+                }
+            } else if (stateUpdateType == StateUpdateType.LOG3) {
+                (bytes memory data, bytes32 topic1, bytes32 topic2, bytes32 topic3) =
+                    abi.decode(arg, (bytes, bytes32, bytes32, bytes32));
+                assembly {
+                    log3(add(data, 0x20), mload(data), topic1, topic2, topic3)
+                }
+            } else if (stateUpdateType == StateUpdateType.LOG4) {
+                (bytes memory data, bytes32 topic1, bytes32 topic2, bytes32 topic3, bytes32 topic4) =
+                    abi.decode(arg, (bytes, bytes32, bytes32, bytes32, bytes32));
+                assembly {
+                    log4(add(data, 0x20), mload(data), topic1, topic2, topic3, topic4)
+                }
+            }
+        }
+    }
+
+    error InvalidArguments();
+    error RevertingContext(uint256 index, address target, bytes revertData, bytes callargs);
+    error ExternalCallResultMismatch(address target, bytes callData, bytes expectedResult, bytes actualResult);
 }
 
 // src/GasKillerSDK.sol
@@ -5529,12 +5570,13 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     /**
      * @notice Function to verify if a signature is valid and contains correct storage updates
      * @dev The message hash must be computed as:
-     *      sha256(abi.encode(transitionIndex, address(this), anchorHash, callerAddress, contractCalldata, storageUpdates))
+     *      sha256(abi.encode(transitionIndex, address(this), anchorHash, callerAddress, contractCalldata, storageUpdates, expectedExternalCalls))
      *      This format enables slashing by including all inputs needed to reproduce execution.
      * @param msgHash The hash of the message to verify
      * @param quorumNumbers The quorum numbers to check signatures for
      * @param referenceBlockNumber The block number to use as reference for operator set
      * @param storageUpdates The storage updates to verify
+     * @param expectedExternalCalls Array of first-level external calls made during execution (as proven in ZK proof)
      * @param transitionIndex The transition index
      * @param anchorHash The block hash anchoring the execution to a specific Ethereum state
      * @param callerAddress The address that initiated the original call (msg.sender)
@@ -5546,6 +5588,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         bytes calldata quorumNumbers,
         uint32 referenceBlockNumber,
         bytes calldata storageUpdates,
+        ExternalCall[] calldata expectedExternalCalls,
         uint256 transitionIndex,
         bytes32 anchorHash,
         address callerAddress,
@@ -5560,7 +5603,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
 
         // Verify transition index and message hash
         require(transitionIndex + 1 == stateTransitionCount(), InvalidTransitionIndex());
-        
+
         // Compute expected hash with all slashing-required fields:
         // - transitionIndex: replay protection
         // - address(this): target contract
@@ -5568,13 +5611,15 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         // - callerAddress: msg.sender (affects execution via access control, balances)
         // - contractCalldata: full calldata with arguments (enables execution reproduction)
         // - storageUpdates: the claimed storage changes
+        // - expectedExternalCalls: first-level external calls made during execution
         bytes32 expectedHash = sha256(abi.encode(
             transitionIndex,
             address(this),
             anchorHash,
             callerAddress,
             contractCalldata,
-            storageUpdates
+            storageUpdates,
+            expectedExternalCalls
         ));
         require(expectedHash == msgHash, InvalidSignature());
 
@@ -5591,8 +5636,8 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
             );
         }
 
-        // Apply the state changes
-        _stateChangeHandler(storageUpdates);
+        // Apply the state changes, verifying external call results match expected
+        _stateChangeHandler(storageUpdates, expectedExternalCalls);
     }
 
     /**
@@ -5613,6 +5658,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
      * @param callerAddress The caller address (msg.sender)
      * @param contractCalldata The full contract calldata
      * @param storageUpdates The storage updates
+     * @param expectedExternalCalls The expected first-level external calls made during execution
      * @return bytes32 The expected message hash
      */
     function getMessageHash(
@@ -5620,7 +5666,8 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         bytes32 anchorHash,
         address callerAddress,
         bytes calldata contractCalldata,
-        bytes calldata storageUpdates
+        bytes calldata storageUpdates,
+        ExternalCall[] calldata expectedExternalCalls
     ) external view returns (bytes32) {
         return sha256(abi.encode(
             transitionIndex,
@@ -5628,7 +5675,8 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
             anchorHash,
             callerAddress,
             contractCalldata,
-            storageUpdates
+            storageUpdates,
+            expectedExternalCalls
         ));
     }
 
@@ -5657,12 +5705,13 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     }
 
     /**
-     * @notice Function to apply storage updates
+     * @notice Function to apply storage updates with external call verification
      * @param storageUpdates The storage updates to apply
+     * @param expectedExternalCalls The expected first-level external calls made during execution
      */
-    function _stateChangeHandler(bytes calldata storageUpdates) internal {
+    function _stateChangeHandler(bytes calldata storageUpdates, ExternalCall[] calldata expectedExternalCalls) internal {
         (StateUpdateType[] memory types, bytes[] memory args) = abi.decode(storageUpdates, (StateUpdateType[], bytes[]));
-        StateChangeHandlerLib._runStateUpdates(types, args);
+        StateChangeHandlerLib._runStateUpdates(types, args, expectedExternalCalls);
     }
 
     /**
