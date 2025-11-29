@@ -4,10 +4,11 @@ pragma solidity ^0.8.0;
 import {IERC165} from "forge-std/interfaces/IERC165.sol";
 import {IBLSSignatureCheckerTypes} from "@eigenlayer-middleware/interfaces/IBLSSignatureChecker.sol";
 
-/// @notice Represents an external storage slot access (address + slot)
+/// @notice Represents an external storage slot with its expected value
 struct ExternalStorageSlot {
     address contractAddress;
     bytes32 slot;
+    bytes32 value;
 }
 
 /**
@@ -24,7 +25,7 @@ interface IGasKillerSDK is IERC165 {
     error InsufficientQuorumThreshold();
     error StaleBlockNumber();
     error FutureBlockNumber();
-    error ExternalStorageSlotMismatch(address contractAddress, bytes32 slot);
+    error ExternalStorageSlotMismatch(address contractAddress, bytes32 slot, bytes32 expectedValue, bytes32 actualValue);
 
     /**
      * @notice Function to verify if a signature is valid and contains correct storage updates

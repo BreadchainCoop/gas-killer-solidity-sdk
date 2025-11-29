@@ -39,10 +39,9 @@ contract GasKillerSDKTest is Test {
         StateUpdateType[] memory types = new StateUpdateType[](1);
         types[0] = StateUpdateType.CALL;
 
-        // CALL args now include externalSlotsAccessed array (empty for this test)
-        bytes32[] memory externalSlotsAccessed = new bytes32[](0);
+        // CALL args: (address target, uint256 value, bytes calldata)
         bytes[] memory args = new bytes[](1);
-        args[0] = abi.encode(address(target), uint256(0), abi.encodeWithSignature("setValue(uint256)", 42), externalSlotsAccessed);
+        args[0] = abi.encode(address(target), uint256(0), abi.encodeWithSignature("setValue(uint256)", 42));
 
         ExternalStorageSlot[] memory expectedExternalSlots = new ExternalStorageSlot[](0);
         sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalSlots);
@@ -56,10 +55,9 @@ contract GasKillerSDKTest is Test {
         StateUpdateType[] memory types = new StateUpdateType[](1);
         types[0] = StateUpdateType.CALL;
 
-        // CALL args now include externalSlotsAccessed array (empty for this test)
-        bytes32[] memory externalSlotsAccessed = new bytes32[](0);
+        // CALL args: (address target, uint256 value, bytes calldata)
         bytes[] memory args = new bytes[](1);
-        args[0] = abi.encode(address(target), uint256(0), abi.encodeWithSignature("revertCall()"), externalSlotsAccessed);
+        args[0] = abi.encode(address(target), uint256(0), abi.encodeWithSignature("revertCall()"));
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -115,6 +113,79 @@ contract GasKillerSDKTest is Test {
 
         // Test that the contract does not support 0xffffffff (invalid interface ID)
         assertFalse(sdk.supportsInterface(0xffffffff));
+    }
+
+    function test_externalStorageSlotVerification_Success() public {
+        // Deploy a target contract with a getStorageAt function
+        StorageReadableTarget target = new StorageReadableTarget();
+        target.setValue(12345);
+
+        // Get the storage slot for the value (slot 0)
+        bytes32 slot = bytes32(uint256(0));
+        bytes32 expectedValue = bytes32(uint256(12345));
+
+        StateUpdateType[] memory types = new StateUpdateType[](0);
+        bytes[] memory args = new bytes[](0);
+
+        // Create expected external slot with the correct value
+        ExternalStorageSlot[] memory expectedExternalSlots = new ExternalStorageSlot[](1);
+        expectedExternalSlots[0] = ExternalStorageSlot({
+            contractAddress: address(target),
+            slot: slot,
+            value: expectedValue
+        });
+
+        // Should succeed because the actual storage value matches expected
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalSlots);
+    }
+
+    function test_externalStorageSlotVerification_Mismatch() public {
+        // Deploy a target contract with a getStorageAt function
+        StorageReadableTarget target = new StorageReadableTarget();
+        target.setValue(12345);
+
+        // Get the storage slot for the value (slot 0)
+        bytes32 slot = bytes32(uint256(0));
+        bytes32 wrongValue = bytes32(uint256(99999)); // Wrong value
+
+        StateUpdateType[] memory types = new StateUpdateType[](0);
+        bytes[] memory args = new bytes[](0);
+
+        // Create expected external slot with wrong value
+        ExternalStorageSlot[] memory expectedExternalSlots = new ExternalStorageSlot[](1);
+        expectedExternalSlots[0] = ExternalStorageSlot({
+            contractAddress: address(target),
+            slot: slot,
+            value: wrongValue
+        });
+
+        // Should revert because actual value (12345) != expected value (99999)
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                StateChangeHandlerLib.ExternalStorageSlotMismatch.selector,
+                address(target),
+                slot,
+                wrongValue,
+                bytes32(uint256(12345))
+            )
+        );
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalSlots);
+    }
+}
+
+contract StorageReadableTarget {
+    uint256 public value;
+
+    function setValue(uint256 _value) public {
+        value = _value;
+    }
+
+    function getStorageAt(bytes32 slot) external view returns (bytes32) {
+        bytes32 result;
+        assembly {
+            result := sload(slot)
+        }
+        return result;
     }
 }
 
