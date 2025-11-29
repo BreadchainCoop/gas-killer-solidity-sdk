@@ -33,58 +33,22 @@ library StateChangeHandlerLib {
         require(types.length == args.length, InvalidArguments());
 
         // Verify all external storage slots have the expected values before executing state updates
+        // External slots are always for contracts other than address(this)
         for (uint256 i = 0; i < expectedExternalSlots.length; i++) {
             ExternalStorageSlot calldata expectedSlot = expectedExternalSlots[i];
-            bytes32 actualValue;
             address target = expectedSlot.contractAddress;
             bytes32 slot = expectedSlot.slot;
 
-            // Perform SLOAD on the external contract's storage slot
-            assembly {
-                // Use extcodecopy trick to read storage from external contract
-                // We use staticcall to a minimal contract that returns the storage value
-                // Actually, we need to use a different approach - direct storage read only works for self
-                // For external contracts, we need to call them. But we can use the SLOAD opcode
-                // only on our own storage. For external storage, we need to use staticcall.
+            // Read storage from external contract via getStorageAt(bytes32)
+            (bool success, bytes memory result) = target.staticcall(
+                abi.encodeWithSignature("getStorageAt(bytes32)", slot)
+            );
 
-                // Build a staticcall to read storage. We'll call the target with empty calldata
-                // and use the slot as the storage key. But this won't work directly.
-
-                // The correct approach is to use extcodesize and then call a view function,
-                // but since we're checking arbitrary slots, we need a different mechanism.
-
-                // For EVM, there's no direct opcode to read another contract's storage.
-                // We need to either:
-                // 1. Use a helper contract that exposes storage reading
-                // 2. Accept that this verification needs to be done differently
-
-                // For now, let's use assembly to load the storage slot as if we could
-                // Note: This will only work for slots in THIS contract, not external contracts
-                actualValue := sload(slot)
+            if (!success || result.length < 32) {
+                revert ExternalStorageSlotMismatch(target, slot, expectedSlot.value, bytes32(0));
             }
 
-            // For external contract storage, we need to use staticcall with a view function
-            // Since we can't directly read external storage, we need a different approach
-            if (target != address(this)) {
-                // For external contracts, we need to call a storage-reading function
-                // This is a limitation - we can only verify if the contract exposes its storage
-                // For now, we'll use a staticcall pattern
-                bytes memory result;
-                bool success;
-
-                // Attempt to read storage using a common pattern (slot-based getter)
-                // This requires the target to have a way to expose its storage
-                (success, result) = target.staticcall(abi.encodeWithSignature("getStorageAt(bytes32)", slot));
-
-                if (success && result.length >= 32) {
-                    actualValue = abi.decode(result, (bytes32));
-                } else {
-                    // If no getter exists, we cannot verify - this is a limitation
-                    // For production, you may want to require all external contracts to implement this
-                    revert ExternalStorageSlotMismatch(target, slot, expectedSlot.value, bytes32(0));
-                }
-            }
-
+            bytes32 actualValue = abi.decode(result, (bytes32));
             require(
                 actualValue == expectedSlot.value,
                 ExternalStorageSlotMismatch(target, slot, expectedSlot.value, actualValue)
