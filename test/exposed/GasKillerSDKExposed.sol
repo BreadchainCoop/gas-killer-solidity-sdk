@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {GasKillerSDK} from "../../src/GasKillerSDK.sol";
+import {ExternalStorageSlot} from "../../src/interface/IGasKillerSDK.sol";
 
 contract GasKillerSDKExposed is GasKillerSDK {
     constructor(address _avsAddress, address _blsSignatureChecker) {
@@ -9,7 +10,10 @@ contract GasKillerSDKExposed is GasKillerSDK {
         _setBlsSignatureChecker(_blsSignatureChecker);
     }
 
-    function stateChangeHandlerExternal(bytes calldata storageUpdates) external {
-        super._stateChangeHandler(storageUpdates);
+    function stateChangeHandlerExternal(
+        bytes calldata storageUpdates,
+        ExternalStorageSlot[] calldata expectedExternalSlots
+    ) external {
+        super._stateChangeHandler(storageUpdates, expectedExternalSlots);
     }
 }

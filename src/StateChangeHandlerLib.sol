@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.0;
 
+import {ExternalStorageSlot} from "./interface/IGasKillerSDK.sol";
+
 enum StateUpdateType {
     STORE,
     CALL,
@@ -12,16 +14,25 @@ enum StateUpdateType {
 }
 
 library StateChangeHandlerLib {
-    /// @notice Decodes and executes a series of state updates
+    /// @notice Decodes and executes a series of state updates with external storage slot verification
     /// @dev This function processes an array of state updates, executing them in sequence. Each update can be one of:
     ///      - STORE: Direct storage writes using assembly
-    ///      - CALL: External contract calls with value transfer
+    ///      - CALL: External contract calls with value transfer (verified against expectedExternalSlots)
     ///      - LOG0-LOG4: Event emission with 0-4 indexed topics
     /// @param types Array of StateUpdateType enums indicating the type of each state update operation
     /// @param args Array of ABI-encoded arguments corresponding to each operation type
+    /// @param expectedExternalSlots Array of external storage slots that were read during execution (as proven in ZK proof)
     /// @dev types and args arrays must be equal length, with args[i] containing the encoded parameters for types[i]
-    function _runStateUpdates(StateUpdateType[] memory types, bytes[] memory args) internal {
+    function _runStateUpdates(
+        StateUpdateType[] memory types,
+        bytes[] memory args,
+        ExternalStorageSlot[] calldata expectedExternalSlots
+    ) internal {
         require(types.length == args.length, InvalidArguments());
+
+        // Track which external slots have been verified
+        uint256 externalSlotIndex = 0;
+
         for (uint256 i = 0; i < types.length; i++) {
             StateUpdateType stateUpdateType = types[i];
             bytes memory arg = args[i];
@@ -32,7 +43,29 @@ library StateChangeHandlerLib {
                     sstore(slot, value)
                 }
             } else if (stateUpdateType == StateUpdateType.CALL) {
-                (address target, uint256 value, bytes memory callargs) = abi.decode(arg, (address, uint256, bytes));
+                (
+                    address target,
+                    uint256 value,
+                    bytes memory callargs,
+                    bytes32[] memory externalSlotsAccessed
+                ) = abi.decode(arg, (address, uint256, bytes, bytes32[]));
+
+                // Verify each external storage slot accessed matches the expected list
+                for (uint256 j = 0; j < externalSlotsAccessed.length; j++) {
+                    require(
+                        externalSlotIndex < expectedExternalSlots.length,
+                        ExternalStorageSlotMismatch(target, externalSlotsAccessed[j])
+                    );
+
+                    ExternalStorageSlot calldata expectedSlot = expectedExternalSlots[externalSlotIndex];
+                    require(
+                        expectedSlot.contractAddress == target && expectedSlot.slot == externalSlotsAccessed[j],
+                        ExternalStorageSlotMismatch(target, externalSlotsAccessed[j])
+                    );
+
+                    externalSlotIndex++;
+                }
+
                 bool success;
                 // TOOD: might need better gas handling
                 uint256 callgas = gasleft();
@@ -85,4 +118,5 @@ library StateChangeHandlerLib {
 
     error InvalidArguments();
     error RevertingContext(uint256 index, address target, bytes revertData, bytes callargs);
+    error ExternalStorageSlotMismatch(address contractAddress, bytes32 slot);
 }

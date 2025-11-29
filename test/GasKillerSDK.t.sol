@@ -8,6 +8,7 @@ import "../src/GasKillerSDK.sol";
 import "./exposed/GasKillerSDKExposed.sol";
 import {StateUpdateType} from "../src/StateChangeHandlerLib.sol";
 import {StateChangeHandlerLib} from "../src/StateChangeHandlerLib.sol";
+import {ExternalStorageSlot} from "../src/interface/IGasKillerSDK.sol";
 
 contract GasKillerSDKTest is Test {
     GasKillerSDKExposed public sdk;
@@ -25,7 +26,8 @@ contract GasKillerSDKTest is Test {
         bytes32 value = bytes32(uint256(100));
         args[0] = abi.encode(slot, value);
 
-        sdk.stateChangeHandlerExternal(abi.encode(types, args));
+        ExternalStorageSlot[] memory expectedExternalSlots = new ExternalStorageSlot[](0);
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalSlots);
 
         assertEq(vm.load(address(sdk), slot), value);
     }
@@ -37,10 +39,13 @@ contract GasKillerSDKTest is Test {
         StateUpdateType[] memory types = new StateUpdateType[](1);
         types[0] = StateUpdateType.CALL;
 
+        // CALL args now include externalSlotsAccessed array (empty for this test)
+        bytes32[] memory externalSlotsAccessed = new bytes32[](0);
         bytes[] memory args = new bytes[](1);
-        args[0] = abi.encode(address(target), uint256(0), abi.encodeWithSignature("setValue(uint256)", 42));
+        args[0] = abi.encode(address(target), uint256(0), abi.encodeWithSignature("setValue(uint256)", 42), externalSlotsAccessed);
 
-        sdk.stateChangeHandlerExternal(abi.encode(types, args));
+        ExternalStorageSlot[] memory expectedExternalSlots = new ExternalStorageSlot[](0);
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalSlots);
 
         assertEq(target.value(), 42);
     }
@@ -51,8 +56,10 @@ contract GasKillerSDKTest is Test {
         StateUpdateType[] memory types = new StateUpdateType[](1);
         types[0] = StateUpdateType.CALL;
 
+        // CALL args now include externalSlotsAccessed array (empty for this test)
+        bytes32[] memory externalSlotsAccessed = new bytes32[](0);
         bytes[] memory args = new bytes[](1);
-        args[0] = abi.encode(address(target), uint256(0), abi.encodeWithSignature("revertCall()"));
+        args[0] = abi.encode(address(target), uint256(0), abi.encodeWithSignature("revertCall()"), externalSlotsAccessed);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -63,7 +70,8 @@ contract GasKillerSDKTest is Test {
                 abi.encodeWithSignature("revertCall()")
             )
         );
-        sdk.stateChangeHandlerExternal(abi.encode(types, args));
+        ExternalStorageSlot[] memory expectedExternalSlots = new ExternalStorageSlot[](0);
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalSlots);
     }
 
     function test_stateChangeHandlerExternal_Log1() public {
@@ -76,7 +84,8 @@ contract GasKillerSDKTest is Test {
 
         vm.recordLogs();
 
-        sdk.stateChangeHandlerExternal(abi.encode(types, args));
+        ExternalStorageSlot[] memory expectedExternalSlots = new ExternalStorageSlot[](0);
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalSlots);
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(logs.length, 1);
@@ -89,8 +98,9 @@ contract GasKillerSDKTest is Test {
         StateUpdateType[] memory types = new StateUpdateType[](2);
         bytes[] memory args = new bytes[](1);
 
+        ExternalStorageSlot[] memory expectedExternalSlots = new ExternalStorageSlot[](0);
         vm.expectRevert(StateChangeHandlerLib.InvalidArguments.selector);
-        sdk.stateChangeHandlerExternal(abi.encode(types, args));
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalSlots);
     }
 
     function test_ERC165_supportsInterface() public {
