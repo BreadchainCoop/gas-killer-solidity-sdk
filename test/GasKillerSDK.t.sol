@@ -8,6 +8,7 @@ import "../src/GasKillerSDK.sol";
 import "./exposed/GasKillerSDKExposed.sol";
 import {StateUpdateType} from "../src/StateChangeHandlerLib.sol";
 import {StateChangeHandlerLib} from "../src/StateChangeHandlerLib.sol";
+import {ExternalCall} from "../src/interface/IGasKillerSDK.sol";
 
 contract GasKillerSDKTest is Test {
     GasKillerSDKExposed public sdk;
@@ -25,7 +26,8 @@ contract GasKillerSDKTest is Test {
         bytes32 value = bytes32(uint256(100));
         args[0] = abi.encode(slot, value);
 
-        sdk.stateChangeHandlerExternal(abi.encode(types, args));
+        ExternalCall[] memory expectedExternalCalls = new ExternalCall[](0);
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalCalls);
 
         assertEq(vm.load(address(sdk), slot), value);
     }
@@ -37,10 +39,12 @@ contract GasKillerSDKTest is Test {
         StateUpdateType[] memory types = new StateUpdateType[](1);
         types[0] = StateUpdateType.CALL;
 
+        // CALL args: (address target, uint256 value, bytes calldata)
         bytes[] memory args = new bytes[](1);
         args[0] = abi.encode(address(target), uint256(0), abi.encodeWithSignature("setValue(uint256)", 42));
 
-        sdk.stateChangeHandlerExternal(abi.encode(types, args));
+        ExternalCall[] memory expectedExternalCalls = new ExternalCall[](0);
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalCalls);
 
         assertEq(target.value(), 42);
     }
@@ -51,6 +55,7 @@ contract GasKillerSDKTest is Test {
         StateUpdateType[] memory types = new StateUpdateType[](1);
         types[0] = StateUpdateType.CALL;
 
+        // CALL args: (address target, uint256 value, bytes calldata)
         bytes[] memory args = new bytes[](1);
         args[0] = abi.encode(address(target), uint256(0), abi.encodeWithSignature("revertCall()"));
 
@@ -63,7 +68,8 @@ contract GasKillerSDKTest is Test {
                 abi.encodeWithSignature("revertCall()")
             )
         );
-        sdk.stateChangeHandlerExternal(abi.encode(types, args));
+        ExternalCall[] memory expectedExternalCalls = new ExternalCall[](0);
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalCalls);
     }
 
     function test_stateChangeHandlerExternal_Log1() public {
@@ -76,7 +82,8 @@ contract GasKillerSDKTest is Test {
 
         vm.recordLogs();
 
-        sdk.stateChangeHandlerExternal(abi.encode(types, args));
+        ExternalCall[] memory expectedExternalCalls = new ExternalCall[](0);
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalCalls);
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(logs.length, 1);
@@ -89,8 +96,9 @@ contract GasKillerSDKTest is Test {
         StateUpdateType[] memory types = new StateUpdateType[](2);
         bytes[] memory args = new bytes[](1);
 
+        ExternalCall[] memory expectedExternalCalls = new ExternalCall[](0);
         vm.expectRevert(StateChangeHandlerLib.InvalidArguments.selector);
-        sdk.stateChangeHandlerExternal(abi.encode(types, args));
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalCalls);
     }
 
     function test_ERC165_supportsInterface() public {
@@ -105,6 +113,112 @@ contract GasKillerSDKTest is Test {
 
         // Test that the contract does not support 0xffffffff (invalid interface ID)
         assertFalse(sdk.supportsInterface(0xffffffff));
+    }
+
+    function test_externalCallVerification_Success() public {
+        // Deploy a target contract with a view function
+        ExternalCallTarget target = new ExternalCallTarget();
+        target.setValue(12345);
+
+        StateUpdateType[] memory types = new StateUpdateType[](0);
+        bytes[] memory args = new bytes[](0);
+
+        // Create expected external call - calling getValue() should return 12345
+        bytes memory callData = abi.encodeWithSignature("getValue()");
+        bytes memory expectedResult = abi.encode(uint256(12345));
+
+        ExternalCall[] memory expectedExternalCalls = new ExternalCall[](1);
+        expectedExternalCalls[0] = ExternalCall({
+            target: address(target),
+            callData: callData,
+            expectedResult: expectedResult
+        });
+
+        // Should succeed because the actual result matches expected
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalCalls);
+    }
+
+    function test_externalCallVerification_Mismatch() public {
+        // Deploy a target contract with a view function
+        ExternalCallTarget target = new ExternalCallTarget();
+        target.setValue(12345);
+
+        StateUpdateType[] memory types = new StateUpdateType[](0);
+        bytes[] memory args = new bytes[](0);
+
+        // Create expected external call with wrong expected result
+        bytes memory callData = abi.encodeWithSignature("getValue()");
+        bytes memory wrongExpectedResult = abi.encode(uint256(99999)); // Wrong value
+
+        ExternalCall[] memory expectedExternalCalls = new ExternalCall[](1);
+        expectedExternalCalls[0] = ExternalCall({
+            target: address(target),
+            callData: callData,
+            expectedResult: wrongExpectedResult
+        });
+
+        // Should revert because actual result (12345) != expected result (99999)
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                StateChangeHandlerLib.ExternalCallResultMismatch.selector,
+                address(target),
+                callData,
+                wrongExpectedResult,
+                abi.encode(uint256(12345))
+            )
+        );
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalCalls);
+    }
+
+    function test_externalCallVerification_MultipleResults() public {
+        // Deploy a target contract
+        ExternalCallTarget target = new ExternalCallTarget();
+        target.setValue(100);
+        target.setName("test");
+
+        StateUpdateType[] memory types = new StateUpdateType[](0);
+        bytes[] memory args = new bytes[](0);
+
+        // Create multiple expected external calls
+        ExternalCall[] memory expectedExternalCalls = new ExternalCall[](2);
+
+        // First call: getValue()
+        expectedExternalCalls[0] = ExternalCall({
+            target: address(target),
+            callData: abi.encodeWithSignature("getValue()"),
+            expectedResult: abi.encode(uint256(100))
+        });
+
+        // Second call: getName()
+        expectedExternalCalls[1] = ExternalCall({
+            target: address(target),
+            callData: abi.encodeWithSignature("getName()"),
+            expectedResult: abi.encode("test")
+        });
+
+        // Should succeed because both actual results match expected
+        sdk.stateChangeHandlerExternal(abi.encode(types, args), expectedExternalCalls);
+    }
+}
+
+contract ExternalCallTarget {
+    uint256 private _value;
+    string private _name;
+
+    function setValue(uint256 val) public {
+        _value = val;
+    }
+
+    function setName(string memory name) public {
+        _name = name;
+    }
+
+    function getValue() external view returns (uint256) {
+        return _value;
+    }
+
+    function getName() external view returns (string memory) {
+        return _name;
     }
 }
 
