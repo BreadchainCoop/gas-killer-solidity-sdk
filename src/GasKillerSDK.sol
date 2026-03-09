@@ -22,6 +22,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
         bytes namespace; // Namespace for the contract
         address avsAddress; // The AVS service manager address
         IBLSSignatureChecker blsSignatureChecker; // The BLS signature checker contract
+        uint256 blockStaleMeasure; // Max block age for reference block validity
     }
 
     // keccak256(abi.encode(uint256(keccak256("gaskiller.GasKillerSDK.storage")) - 1)) & ~bytes32(uint256(0xff));
@@ -31,7 +32,9 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     // Constants for stake threshold checking
     uint8 public constant THRESHOLD_DENOMINATOR = 100;
     uint8 public constant QUORUM_THRESHOLD = 66; // 66% quorum threshold
-    uint32 public constant BLOCK_STALE_MEASURE = 300;
+
+    // Default values for the storage
+    uint256 private constant DEFAULT_BLOCK_STALE_MEASURE = 300;
 
     /**
      * @notice Function to verify if a signature is valid and contains correct storage updates
@@ -56,7 +59,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
 
         // Check block number validity
         require(referenceBlockNumber < block.number, FutureBlockNumber());
-        require((referenceBlockNumber + BLOCK_STALE_MEASURE) >= uint32(block.number), StaleBlockNumber());
+        require((uint256(referenceBlockNumber) + _getBlockStaleMeasure()) >= block.number, StaleBlockNumber());
 
         // Verify transition index and message hash
         require(transitionIndex + 1 == stateTransitionCount(), InvalidTransitionIndex());
@@ -130,6 +133,14 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     }
 
     /**
+     * @notice Function to get the block stale measure
+     * @return uint256 The block stale measure
+     */
+    function blockStaleMeasure() external view returns (uint256) {
+        return _getBlockStaleMeasure();
+    }
+
+    /**
      * @notice Function to apply storage updates
      * @param storageUpdates The storage updates to apply
      */
@@ -156,6 +167,23 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     function _setBlsSignatureChecker(address _blsSignatureChecker) internal {
         GasKillerSDKStorage storage $ = _getGasKillerSDKStorage();
         $.blsSignatureChecker = IBLSSignatureChecker(_blsSignatureChecker);
+    }
+
+    /**
+     * @notice Internal function to set the block stale measure
+     * @param _blockStaleMeasure The new block stale measure value
+     */
+    function _setBlockStaleMeasure(uint256 _blockStaleMeasure) internal {
+        _getGasKillerSDKStorage().blockStaleMeasure = _blockStaleMeasure;
+    }
+
+    /**
+     * @notice Internal function to get the block stale measure
+     * @return uint256 The block stale measure
+     */
+    function _getBlockStaleMeasure() internal view returns (uint256) {
+        uint256 value = _getGasKillerSDKStorage().blockStaleMeasure;
+        return value == 0 ? DEFAULT_BLOCK_STALE_MEASURE : value;
     }
 
     /**
