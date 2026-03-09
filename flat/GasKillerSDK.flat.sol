@@ -5507,6 +5507,9 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     uint8 public constant THRESHOLD_DENOMINATOR = 100;
     uint8 public constant QUORUM_THRESHOLD = 66; // 66% quorum threshold
 
+    // Default values for the storage
+    uint256 private constant DEFAULT_BLOCK_STALE_MEASURE = 300;
+
     /**
      * @notice Function to verify if a signature is valid and contains correct storage updates
      * @param msgHash The hash of the message to verify
@@ -5649,12 +5652,12 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
     }
 
     /**
-     * @notice Internal function to get the block stale measure, defaulting to type(uint256).max when unset
+     * @notice Internal function to get the block stale measure
      * @return uint256 The block stale measure
      */
     function _getBlockStaleMeasure() internal view returns (uint256) {
         uint256 value = _getGasKillerSDKStorage().blockStaleMeasure;
-        return value == 0 ? type(uint256).max : value;
+        return value == 0 ? DEFAULT_BLOCK_STALE_MEASURE : value;
     }
 
     /**
