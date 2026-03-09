@@ -5608,7 +5608,7 @@ abstract contract GasKillerSDK is StateTracker, IGasKillerSDK {
 
     /**
      * @notice Function to get the block stale measure
-     * @return uint256 The block stale measure (default: type(uint256).max)
+     * @return uint256 The block stale measure
      */
     function blockStaleMeasure() external view returns (uint256) {
         return _getBlockStaleMeasure();
