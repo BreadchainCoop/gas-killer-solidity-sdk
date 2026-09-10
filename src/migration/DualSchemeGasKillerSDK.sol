@@ -39,6 +39,11 @@ import {StateChangeHandlerLib, StateUpdateType} from "../StateChangeHandlerLib.s
 ///      to the scheme-specific bases, so the off-chain signing path is unaffected. The two
 ///      schemes share the one transition counter and therefore settle into a single
 ///      sequence, in any order.
+///
+///      Both paths being live means either operator set's quorum can settle against the
+///      target, so its trust assumption is the union of the two for as long as it inherits
+///      this. That is the point during a migration window in which one party operates both
+///      sets, and is the reason not to inherit this outside one.
 abstract contract DualSchemeGasKillerSDK is
     StateTracker,
     TransitionGuard,
@@ -51,6 +56,13 @@ abstract contract DualSchemeGasKillerSDK is
     /// @dev Own namespace, distinct from the `GasKillerSDK` and `SchnorrGasKillerSDK` ones.
     ///      A contract inheriting this behind a proxy must set the AVS address, both
     ///      verifiers and the stale measure against this namespace.
+    ///
+    ///      Field order is load-bearing. `schnorrRegistry` and `blockStaleMeasure` fill one
+    ///      slot exactly, which is the whole reason a settlement reads the config it needs
+    ///      and no more: the Schnorr path touches that single slot, and the BLS path that
+    ///      slot plus `blsSignatureChecker`. `avsAddress` is read by neither path, only by
+    ///      its getter. Reordering these buys nothing and costs one path a cold `SLOAD` on
+    ///      every settlement.
     struct DualSchemeSDKStorage {
         /// @notice The Schnorr stake registry verifying aggregate Schnorr quorums
         ISchnorrStakeRegistry schnorrRegistry;

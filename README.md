@@ -30,12 +30,10 @@ differ only in how an operator quorum's approval is verified on-chain:
   Schnorr signature against a `SchnorrStakeRegistry` in constant gas (one `ecrecover`, non-signer
   subtraction). Rogue-key-safe via a registration proof of possession.
 
-A third, **transitional** base carries both at once: `DualSchemeGasKillerSDK` implements both
-verification paths over one storage namespace and keeps both permanently live, so a target
-deployed today survives the BLS-to-Schnorr service cutover without being redeployed and
-without any transaction on the day. See
-[Migrating from BLS to Schnorr](#migrating-from-bls-to-schnorr). It is scheduled for removal
-once the migration is done; new integrations should inherit one of the two bases above.
+A transitional `DualSchemeGasKillerSDK` carries both at once for the service's BLS-to-Schnorr
+cutover, and is scheduled for removal after it: see
+[Migrating from BLS to Schnorr](#migrating-from-bls-to-schnorr). New integrations should inherit
+one of the two bases above.
 
 ## Chain requirements
 
@@ -126,13 +124,15 @@ Consequences for integrators:
 
 ## Migrating from BLS to Schnorr
 
-`DualSchemeGasKillerSDK` (`src/migration/`) is a **transitional** base that settles under
-either verification scheme. Both `verifyAndUpdate` overloads are permanently live and both
-scheme interface IDs are permanently reported: there is no mode, no switch and no
-configuration step. Inherit it instead of either scheme-specific base for the duration of the
-migration, then move to `SchnorrGasKillerSDK` once the cutover has settled. `src/migration/`
-and `test/migration/` are scheduled for removal after that; nothing new should be built on
-them.
+Everything in this section is transitional. `src/migration/` and `test/migration/` are scheduled
+for removal once the cutover has settled, and this section goes with them.
+
+`DualSchemeGasKillerSDK` settles under either verification scheme. Both `verifyAndUpdate`
+overloads are permanently live and both scheme interface IDs are permanently reported, so there is
+no mode, no switch and no transaction at cutover: the service probes only the scheme its own fleet
+runs, so a target that accepts both is already finished and starts settling Schnorr rounds when
+that fleet restarts. Inherit it in place of either scheme-specific base for the duration of the
+migration, then move to `SchnorrGasKillerSDK`.
 
 ```solidity
 import {DualSchemeGasKillerSDK} from "gas-killer-sdk/migration/DualSchemeGasKillerSDK.sol";
@@ -147,46 +147,18 @@ contract MyContract is DualSchemeGasKillerSDK {
 }
 ```
 
-### The cutover needs no transaction
+Both verifiers have to be wired. A fleet running the scheme whose verifier is unset routes to the
+target and then fails to settle against it, which is the failure mode this base exists to prevent.
 
-Worth being precise about, because it is the reason this base is as small as it is. The
-service does not ask a target which scheme it wants. Each router and node process runs exactly
-one scheme, fixed by its own `SIGNATURE_SCHEME` environment variable, probes only that
-scheme's ERC-165 ID, and refuses to settle against a target that does not report it. A
-target's only job is to *accept* whatever the fleet arrives with.
+`DualSchemeGasKillerSDK`'s NatSpec covers the rest. The two things to read before deploying one are
+there: the transition counter is shared, so the two schemes settle into one sequence in any order,
+and while both paths are live either operator set's quorum can settle, so the target's trust
+assumption is the union of the two.
 
-So a target that accepts both is already finished. Redeploy against this base at any point in
-the next two weeks; when the fleet restarts on `SIGNATURE_SCHEME=schnorr`, your target starts
-settling Schnorr rounds with no action from you and no downtime in between.
-
-Both verifiers must be wired at construction. A target missing one is one that a fleet running
-that scheme will route to and then fail to settle against. That is the single failure mode this
-base exists to prevent, which is why the example rejects it in its constructor.
-
-### What is unchanged
-
-The signed digest, the `stateTransitionCount` counter, the `TransitionGuard` latch and
-`StateChangeHandlerLib` application are all identical to both scheme-specific bases, as is
-each path's validation and its order, so the off-chain signing path cannot tell the
-difference.
-
-The transition counter is shared, so the two schemes settle into one sequence: a BLS round at
-index N and a Schnorr round at index N+1 compose exactly as two rounds of one scheme would, in
-either order. A fleet restart mid-stream is therefore not a special case.
-
-Storage is packed so neither path pays for the other's config (the Schnorr registry shares a
-slot with the stale measure), giving the Schnorr path one cold config read and the BLS path
-two, which is parity with `SchnorrGasKillerSDK` and `GasKillerSDK` respectively.
-
-Two properties to be aware of rather than to act on:
-
-- While both paths are live, either operator set's quorum can settle against the target, so its
-  trust assumption is the union of the two. That is intended for a migration window in which
-  both sets are operated by the same party.
-- The base uses its own ERC-7201 namespace and does **not** read a `GasKillerSDK`
-  predecessor's stored config, so anyone inheriting behind a proxy must re-set the AVS address,
-  the signature checker and the stale measure after an implementation swap. Nothing is
-  mis-read: the fields start zeroed, and a zeroed verifier fails closed.
+`src/migration/examples/DualSchemeArraySummation.sol` is a demo target, deployed by
+`script/DeployDualSchemeArraySummation.s.sol` with `AVS_ADDRESS`, `SIG_CHECKER_ADDRESS` and
+`SCHNORR_STAKE_REGISTRY_ADDRESS`. It provisions neither verifier, for the reasons given under
+[Deploy SchnorrArraySummation](#deploy-schnorrarraysummation-demo).
 
 ## Funding value-bearing state updates
 
@@ -349,20 +321,3 @@ The registry is required rather than deployed here. It is an operator set, popul
 operator registering a secp256k1 key with a proof of possession, which the service repo's
 `setup_schnorr_operators` binary does. Deploying one here would produce a target verifying
 against an empty set.
-
-### Deploy DualSchemeArraySummation (demo)
-
-The migration-period counterpart, wired to **both** verifiers so the same address settles
-against a BLS fleet today and a Schnorr fleet after the cutover, with no transaction in
-between. See [Migrating from BLS to Schnorr](#migrating-from-bls-to-schnorr).
-
-```bash
-forge script script/DeployDualSchemeArraySummation.s.sol --rpc-url <rpc_url> --private-key <private_key> --broadcast
-```
-
-Required environment variables: `AVS_ADDRESS`, `SIG_CHECKER_ADDRESS`,
-`SCHNORR_STAKE_REGISTRY_ADDRESS`, `ARRAY_SIZE`, `MAX_VALUE`, `ARRAY_SEED`
-
-Both verifier addresses are required: a target missing one is one that a fleet running that
-scheme will route to and then fail to settle against. Neither is provisioned by the script,
-for the reasons given above.
