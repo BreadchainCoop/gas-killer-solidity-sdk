@@ -30,6 +30,11 @@ differ only in how an operator quorum's approval is verified on-chain:
   Schnorr signature against a `SchnorrStakeRegistry` in constant gas (one `ecrecover`, non-signer
   subtraction). Rogue-key-safe via a registration proof of possession.
 
+A transitional `DualSchemeGasKillerSDK` carries both at once for the service's BLS-to-Schnorr
+cutover, and is scheduled for removal after it: see
+[Migrating from BLS to Schnorr](#migrating-from-bls-to-schnorr). New integrations should inherit
+one of the two bases above.
+
 ## Chain requirements
 
 `TransitionGuard` (used by the base `GasKillerSDK.verifyAndUpdate` and the Schnorr scheme's
@@ -117,6 +122,44 @@ Consequences for integrators:
   mutation timing and each consumer's staleness bound, so keeping the two consistent is
   deployment discipline rather than a contract guarantee.
 
+## Migrating from BLS to Schnorr
+
+Everything in this section is transitional. `src/migration/` and `test/migration/` are scheduled
+for removal once the cutover has settled, and this section goes with them.
+
+`DualSchemeGasKillerSDK` settles under either verification scheme. Both `verifyAndUpdate`
+overloads are permanently live and both scheme interface IDs are permanently reported, so there is
+no mode, no switch and no transaction at cutover: the service probes only the scheme its own fleet
+runs, so a target that accepts both is already finished and starts settling Schnorr rounds when
+that fleet restarts. Inherit it in place of either scheme-specific base for the duration of the
+migration, then move to `SchnorrGasKillerSDK`.
+
+```solidity
+import {DualSchemeGasKillerSDK} from "gas-killer-sdk/migration/DualSchemeGasKillerSDK.sol";
+
+contract MyContract is DualSchemeGasKillerSDK {
+    constructor(address _avs, address _blsSigChecker, address _schnorrRegistry) {
+        _setAvsAddress(_avs);
+        // Wire both verifiers. That is the whole integration.
+        _setBlsSignatureChecker(_blsSigChecker);
+        _setSchnorrRegistry(_schnorrRegistry);
+    }
+}
+```
+
+Both verifiers have to be wired. A fleet running the scheme whose verifier is unset routes to the
+target and then fails to settle against it, which is the failure mode this base exists to prevent.
+
+`DualSchemeGasKillerSDK`'s NatSpec covers the rest. The two things to read before deploying one are
+there: the transition counter is shared, so the two schemes settle into one sequence in any order,
+and while both paths are live either operator set's quorum can settle, so the target's trust
+assumption is the union of the two.
+
+`src/migration/examples/DualSchemeArraySummation.sol` is a demo target, deployed by
+`script/DeployDualSchemeArraySummation.s.sol` with `AVS_ADDRESS`, `SIG_CHECKER_ADDRESS` and
+`SCHNORR_STAKE_REGISTRY_ADDRESS`. It provisions neither verifier, for the reasons given under
+[Deploy SchnorrArraySummation](#deploy-schnorrarraysummation-demo).
+
 ## Funding value-bearing state updates
 
 A `CALL`, `CREATE` or `CREATE2` state update can move ETH, and it is paid out of the settling
@@ -158,6 +201,9 @@ described above — spends nothing, so its share simply lands in the retained-su
   - `SchnorrStakeRegistry.sol` — Aggregate-key registry with proof-of-possession registration and non-signer subtraction
   - `interface/` — `ISchnorrGasKillerSDK` and `ISchnorrStakeRegistry`
   - `libraries/` — `Secp256k1` (affine point math) and `SchnorrVerify` (constant-gas `ecrecover`-trick verify)
+- **`src/migration/`**: Transitional dual-scheme code, for the BLS-to-Schnorr cutover only. This directory and `test/migration/` are scheduled for removal once the migration is done
+  - `DualSchemeGasKillerSDK.sol`: Abstract base implementing both verification paths, both permanently live
+  - `examples/DualSchemeArraySummation.sol`: Demo app settling under either scheme
 - **`src/examples/array-summation/`** — Demo apps: `ArraySummation`(`Factory`) (BLS) and `SchnorrArraySummation`(`Factory`) (Schnorr)
 - **`script/`** — Deployment scripts
 - **`test/`** — Unit and integration tests
